@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+from typing import Optional
 from uuid import UUID
 
 import asyncpg
@@ -49,3 +51,28 @@ async def upsert_article_versioned(
             conn, cluster_signature, keep_version=new_version
         )
     return article_id
+
+
+def compute_confidence_score(
+    cluster_cohesion: float,
+    source_incident_count: int,
+    llm_self_rating: float,
+    rolling_feedback_score: Optional[float],
+) -> float:
+    """Spec §5.4 — blend four signals into a final 0..1 confidence."""
+    count_score = (
+        min(1.0, math.log10(source_incident_count + 1) / 1.5)
+        if source_incident_count > 0
+        else 0.0
+    )
+    feedback = rolling_feedback_score if rolling_feedback_score is not None else 0.5
+    return min(
+        1.0,
+        max(
+            0.0,
+            0.30 * cluster_cohesion
+            + 0.20 * count_score
+            + 0.20 * llm_self_rating
+            + 0.30 * feedback,
+        ),
+    )
