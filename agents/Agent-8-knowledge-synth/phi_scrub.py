@@ -13,8 +13,6 @@ _PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\b(member|patient)\s+id[-:\s]+\d{6,}\b", re.IGNORECASE),          "[PATIENT-ID REDACTED]"),
     (re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),                                          "[ID REDACTED]"),
     (re.compile(r"\b(member|patient)\s+\w+\s+\d{6,}\b", re.IGNORECASE),             "[PATIENT-ID REDACTED]"),
-    # Lone long digit runs near patient-context words
-    (re.compile(r"(?i)\bmember id:\s*\d+", re.IGNORECASE),                          "[PATIENT-ID REDACTED]"),
 ]
 
 

@@ -68,9 +68,7 @@ def normalize_incident(raw: dict[str, Any]) -> Optional[dict[str, Any]]:
     }
 
 
-import re as _re
-
-_STEP_MARKER = _re.compile(r"(?im)(^\s*(?:step\s*\d+|first|then|finally|\d+[\.\)])\b)")
+_STEP_MARKER = re.compile(r"(?im)(^\s*(?:step\s*\d+|first|then|finally|\d+[\.\)])\b)")
 
 
 def quality_score(inc: dict) -> float:
@@ -97,7 +95,8 @@ def quality_score(inc: dict) -> float:
     if inc.get("has_sentinel_attribution"):
         score += 0.20
 
-    # Unique-reporter bonus (placeholder until SNOW caller_id is plumbed)
-    score += 0.10
+    # Unique-reporter bonus — fires only when caller_id is plumbed and present
+    if inc.get("caller_id"):
+        score += 0.10
 
-    return min(score, 1.0)
+    return min(round(score, 10), 1.0)
