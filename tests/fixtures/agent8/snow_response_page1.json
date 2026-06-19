@@ -1,0 +1,26 @@
+{
+  "result": [
+    {
+      "number": "INC0010001",
+      "short_description": "Database connection pool exhausted in app-svc",
+      "description": "Pods returning 503; HikariCP timeouts during peak hours",
+      "close_notes": "Restarted pods; raised pool size to 25 via configmap",
+      "close_code": "Solved (Permanently)",
+      "assignment_group": "App-Backend-Platform",
+      "category": "Application",
+      "subcategory": "Database Connectivity",
+      "closed_at": "2026-05-12 14:23:00"
+    },
+    {
+      "number": "INC0010002",
+      "short_description": "Dup",
+      "description": "Same as 001",
+      "close_notes": "Duplicate of INC0010001",
+      "close_code": "Duplicate",
+      "assignment_group": "App-Backend-Platform",
+      "category": "Application",
+      "subcategory": "Database Connectivity",
+      "closed_at": "2026-05-12 15:00:00"
+    }
+  ]
+}
