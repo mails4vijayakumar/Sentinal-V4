@@ -8,10 +8,11 @@ class EmbeddingClient(Protocol):
 
 
 def build_embedding_text(inc: dict[str, Any]) -> str:
+    resolution = inc.get("close_notes") or ""
     parts = [
         inc.get("short_description") or "",
         inc.get("description") or "",
-        f"Resolution: {inc.get('close_notes') or ''}",
+        f"Resolution: {resolution}" if resolution else "",
     ]
     return "\n\n".join(p for p in parts if p)
 

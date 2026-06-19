@@ -18,6 +18,7 @@ class ClusterRaw:
     cohesion: float
     medoid_index: int
     signature: str = field(default="")
+    member_numbers: list[str] = field(default_factory=list)
 
 
 def _cosine_cohesion(vectors: np.ndarray) -> float:
@@ -65,17 +66,15 @@ def cluster_per_team(
     for team, idxs in by_team.items():
         if len(idxs) < min_cluster_size:
             continue
-        vecs = np.array([embeddings[i] for i in idxs])
+        vecs = np.asarray([embeddings[i] for i in idxs], dtype=np.float64)
         clusterer = hdbscan.HDBSCAN(
             min_cluster_size=min_cluster_size,
             min_samples=min_samples,
-            metric="euclidean",  # we'll feed L2-normalised vectors so euclidean ≈ cosine ordering
+            metric="cosine",  # per spec §4.1
+            algorithm="generic",  # required: hdbscan's BallTree/KDTree backends do not support cosine
             cluster_selection_method="eom",
         )
-        # Normalise to unit length so euclidean distance ranks like cosine distance
-        norms = np.linalg.norm(vecs, axis=1, keepdims=True)
-        normed = vecs / np.clip(norms, 1e-12, None)
-        labels = clusterer.fit_predict(normed)
+        labels = clusterer.fit_predict(vecs)
 
         for label in sorted(set(labels)):
             if label == -1:  # noise
@@ -86,13 +85,15 @@ def cluster_per_team(
             cohesion = _cosine_cohesion(cluster_vecs)
             medoid_local = _medoid(cluster_vecs)
             medoid_global = idxs[local_members[medoid_local]]
-            sig = _signature(team, [incidents[g]["number"] for g in global_members])
+            member_numbers_list = [incidents[g]["number"] for g in global_members]
+            sig = _signature(team, member_numbers_list)
             all_clusters.append(ClusterRaw(
                 assignment_group=team,
                 member_indices=global_members,
                 cohesion=cohesion,
                 medoid_index=medoid_global,
                 signature=sig,
+                member_numbers=member_numbers_list,
             ))
             logger.info("cluster_built", extra={
                 "team": team, "size": len(global_members), "cohesion": cohesion,
@@ -104,9 +105,13 @@ def apply_quality_gate(
     clusters: list[ClusterRaw],
     *,
     min_cohesion: float = 0.65,
+    min_size: int = 2,
 ) -> list[ClusterRaw]:
-    """Drop clusters whose pairwise cohesion is below the threshold."""
-    return [c for c in clusters if c.cohesion >= min_cohesion]
+    """Drop clusters whose pairwise cohesion or member count is below the threshold."""
+    return [
+        c for c in clusters
+        if c.cohesion >= min_cohesion and len(c.member_indices) >= min_size
+    ]
 
 
 def pick_representatives(
@@ -122,5 +127,6 @@ def pick_representatives(
     medoid_vec = normed[medoid_local_index]
     sims = normed @ medoid_vec  # higher = closer
     sims[medoid_local_index] = -np.inf  # exclude self from neighbour pick
-    top_k = np.argsort(-sims)[:k].tolist()
+    effective_k = min(k, len(cluster_vectors) - 1)
+    top_k = np.argsort(-sims)[:effective_k].tolist()
     return [medoid_local_index, *top_k]
