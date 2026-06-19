@@ -142,7 +142,7 @@ async def run_synthesis_with_deps(
                         assignment_group=clean[cluster_raw.member_indices[i]]["assignment_group"],
                         category=clean[cluster_raw.member_indices[i]].get("category"),
                         subcategory=clean[cluster_raw.member_indices[i]].get("subcategory"),
-                        closed_at=clean[cluster_raw.member_indices[i]]["closed_at_iso"],
+                        closed_at=clean[cluster_raw.member_indices[i]]["closed_at"],
                         quality_score=quality_score(clean[cluster_raw.member_indices[i]]),
                     )
                     for i in rep_indices_local
@@ -157,12 +157,19 @@ async def run_synthesis_with_deps(
                 article = await deps.synthesize_one(cluster_result)
                 return cluster_raw, cluster_result, article
 
-        synth_results = await asyncio.gather(*[_synth_one(c) for c in good_clusters])
+        synth_results = await asyncio.gather(
+            *[_synth_one(c) for c in good_clusters], return_exceptions=True
+        )
         durations["synthesize"] = time.perf_counter() - t0
 
         # 10-12. Dedup, upsert, publish
         t0 = time.perf_counter()
-        for cluster_raw, cluster_result, article in synth_results:
+        for item in synth_results:
+            if isinstance(item, BaseException):
+                counts.skipped += 1
+                logger.warning("synth_one_failed", extra={"error": str(item)})
+                continue
+            cluster_raw, cluster_result, article = item
             if article is None:
                 counts.skipped += 1
                 await deps.insert_decision(

@@ -31,7 +31,7 @@ See `.env.example` for the full `SYNTH_*` list. Key knobs:
 - `SYNTH_QUALITY_SCORE_FLOOR` (default 0.40) — incidents below this quality score are filtered before clustering.
 - `SYNTH_DEDUP_UPDATE_THRESHOLD` (0.92) and `SYNTH_DEDUP_REVIEW_THRESHOLD` (0.80) — cosine similarity bands. Above update → in-place version bump. Between thresholds → `decision='review'`. Below → new article.
 - `SYNTH_LLM_MODEL` — default `llama3.1:70b`; override per provider (`claude-sonnet-4-...`, `gpt-4o`, …).
-- `SYNTH_LLM_MAX_TOKENS_PER_RUN` (500k) — cost ceiling; orchestrator aborts further synthesis when reached, finalises run as `succeeded` with `counts.budget_exceeded` populated.
+- `SYNTH_LLM_MAX_TOKENS_PER_RUN` (500k) — Reserved for a future cost-ceiling feature; current implementation does not enforce a per-run token budget. Configure your LLM provider's quota at the provider level for now.
 - `SYNTH_PUBLISH_CONFLUENCE` — flip to `false` to disable Confluence side-effects while iterating on prompts.
 - `SYNTH_CONFLUENCE_SPACE` (default `AUTO_KB`) — target space key for synthesised articles.
 - `SYNTH_RETIRE_LOW_FEEDBACK` — when true, articles with low feedback signals are flagged for retirement at the end of each run.
@@ -104,7 +104,7 @@ ORDER BY active_articles DESC;
   REINDEX INDEX CONCURRENTLY idx_skb_title_vec;
   REINDEX INDEX CONCURRENTLY idx_skb_body_vec;
   ```
-- **Token budget exceeded mid-run** — orchestrator stops dispatching to the LLM, finalises remaining clusters with `decision='skip'` and `notes='budget_exceeded'`, run finishes as `succeeded`. Raise `SYNTH_LLM_MAX_TOKENS_PER_RUN` or shrink the window.
+- **Token budget** — `SYNTH_LLM_MAX_TOKENS_PER_RUN` is reserved for a future cost-ceiling feature; current implementation does not enforce a per-run token budget. Configure your LLM provider's quota at the provider level for now.
 - **APScheduler missed-fire** — APScheduler is configured with `misfire_grace_time=3600`; if Agent 8 was down at 02:00 and comes up by 03:00, the run still fires. Beyond that, trigger the missed window via the admin endpoint.
 
 ## Security

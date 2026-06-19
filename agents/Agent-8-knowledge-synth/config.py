@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     # Agent 8 specific
     synth_schedule_cron: str = Field(default="0 2 1 * *", alias="SYNTH_SCHEDULE_CRON")
     synth_min_cluster_size: int = Field(default=5, alias="SYNTH_MIN_CLUSTER_SIZE")
+    synth_min_samples: int = Field(default=3, alias="SYNTH_MIN_SAMPLES")
     synth_min_cluster_cohesion: float = Field(default=0.65, alias="SYNTH_MIN_CLUSTER_COHESION")
     synth_quality_score_floor: float = Field(default=0.40, alias="SYNTH_QUALITY_SCORE_FLOOR")
     synth_dedup_update_threshold: float = Field(default=0.92, alias="SYNTH_DEDUP_UPDATE_THRESHOLD")

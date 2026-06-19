@@ -65,6 +65,7 @@ def normalize_incident(raw: dict[str, Any]) -> Optional[dict[str, Any]]:
         "category": (raw.get("category") or None) or None,
         "subcategory": (raw.get("subcategory") or None) or None,
         "closed_at_iso": closed_at.isoformat(),
+        "closed_at": closed_at,
     }
 
 

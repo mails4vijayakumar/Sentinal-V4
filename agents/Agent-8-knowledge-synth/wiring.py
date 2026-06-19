@@ -69,6 +69,7 @@ def build_deps(ctx: RuntimeContext | None = None) -> OrchestratorDeps:
             finalize_run=_noop,
             quality_score_floor=settings.synth_quality_score_floor,
             min_cluster_size=settings.synth_min_cluster_size,
+            min_samples=settings.synth_min_samples,
             min_cohesion=settings.synth_min_cluster_cohesion,
             dedup_update_threshold=settings.synth_dedup_update_threshold,
             dedup_review_threshold=settings.synth_dedup_review_threshold,
@@ -113,6 +114,8 @@ def build_deps(ctx: RuntimeContext | None = None) -> OrchestratorDeps:
         )
 
     async def _retire(*, months_window, min_recommendations, min_score):
+        if not s.synth_retire_low_feedback:
+            return []
         async with ctx.pool.acquire() as conn:
             return await rt.retire_low_feedback_articles(
                 conn, months_window=months_window,
@@ -148,6 +151,7 @@ def build_deps(ctx: RuntimeContext | None = None) -> OrchestratorDeps:
         finalize_run=_finalize,
         quality_score_floor=s.synth_quality_score_floor,
         min_cluster_size=s.synth_min_cluster_size,
+        min_samples=s.synth_min_samples,
         min_cohesion=s.synth_min_cluster_cohesion,
         dedup_update_threshold=s.synth_dedup_update_threshold,
         dedup_review_threshold=s.synth_dedup_review_threshold,
