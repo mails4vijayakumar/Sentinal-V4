@@ -1,0 +1,5 @@
+# Agent 8-specific deps (shared deps come from agents/requirements.txt)
+hdbscan==0.8.40
+scikit-learn==1.5.2
+pydantic-settings==2.6.0
+apscheduler==3.10.4
