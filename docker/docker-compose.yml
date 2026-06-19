@@ -217,6 +217,42 @@ services:
     depends_on: { redis: { condition: service_healthy }, routing-db: { condition: service_healthy } }
     networks: [sentinel-net]
 
+  agent-8:
+    container_name: sentinel-agent-8
+    build:
+      context: ..
+      dockerfile: agents/Agent-8-knowledge-synth/Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      AGENT_8_PORT:                    "8008"
+      SYNTH_SCHEDULE_CRON:             ${SYNTH_SCHEDULE_CRON:-0 2 1 * *}
+      SYNTH_MIN_CLUSTER_SIZE:          ${SYNTH_MIN_CLUSTER_SIZE:-5}
+      SYNTH_MIN_CLUSTER_COHESION:      ${SYNTH_MIN_CLUSTER_COHESION:-0.65}
+      SYNTH_QUALITY_SCORE_FLOOR:       ${SYNTH_QUALITY_SCORE_FLOOR:-0.40}
+      SYNTH_DEDUP_UPDATE_THRESHOLD:    ${SYNTH_DEDUP_UPDATE_THRESHOLD:-0.92}
+      SYNTH_DEDUP_REVIEW_THRESHOLD:    ${SYNTH_DEDUP_REVIEW_THRESHOLD:-0.80}
+      SYNTH_LLM_MODEL:                 ${SYNTH_LLM_MODEL:-llama3.1:70b}
+      SYNTH_LLM_MAX_TOKENS_PER_RUN:    ${SYNTH_LLM_MAX_TOKENS_PER_RUN:-500000}
+      SYNTH_PUBLISH_CONFLUENCE:        ${SYNTH_PUBLISH_CONFLUENCE:-true}
+      SYNTH_CONFLUENCE_SPACE:          ${SYNTH_CONFLUENCE_SPACE:-AUTO_KB}
+      SYNTH_RETIRE_LOW_FEEDBACK:       ${SYNTH_RETIRE_LOW_FEEDBACK:-true}
+      SYNTH_ADMIN_TOKEN:               ${SYNTH_ADMIN_TOKEN:-}
+      SYNTH_MAX_CONCURRENT_SYNTHESIZE: ${SYNTH_MAX_CONCURRENT_SYNTHESIZE:-10}
+    ports: ["8008:8008"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8008/health').read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks: [sentinel-net]
+
   # ── Webapp (React) ────────────────────────────────────────────────────────
   webapp:
     container_name: sentinel-webapp
