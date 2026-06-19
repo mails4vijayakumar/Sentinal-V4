@@ -3,7 +3,9 @@ import pytest
 
 from agents.Agent_8_knowledge_synth.cluster import (
     ClusterRaw,
+    apply_quality_gate,
     cluster_per_team,
+    pick_representatives,
 )
 
 
@@ -57,3 +59,38 @@ def test_cluster_scoped_to_team():
     for c in clusters:
         ags = {incidents[i]["assignment_group"] for i in c.member_indices}
         assert len(ags) == 1
+
+
+@pytest.mark.unit
+def test_quality_gate_rejects_low_cohesion():
+    raw = ClusterRaw(assignment_group="T", member_indices=[0,1,2,3,4],
+                     cohesion=0.40, medoid_index=0, signature="T_abc")
+    kept = apply_quality_gate([raw], min_cohesion=0.65)
+    assert kept == []
+
+
+@pytest.mark.unit
+def test_quality_gate_keeps_dense_cluster():
+    raw = ClusterRaw(assignment_group="T", member_indices=[0,1,2,3,4],
+                     cohesion=0.80, medoid_index=0, signature="T_xyz")
+    kept = apply_quality_gate([raw], min_cohesion=0.65)
+    assert len(kept) == 1
+
+
+@pytest.mark.unit
+def test_pick_representatives_medoid_plus_k_nearest():
+    rng = np.random.default_rng(0)
+    base = rng.normal(0, 1, 768); base /= np.linalg.norm(base)
+    # 8 members: 0 is medoid; 1-4 are nearby; 5-7 are farther
+    vectors = [base.tolist()]
+    for i in range(1, 5):
+        v = base + rng.normal(0, 0.01, 768)
+        vectors.append((v / np.linalg.norm(v)).tolist())
+    for i in range(5, 8):
+        v = base + rng.normal(0, 0.05, 768)
+        vectors.append((v / np.linalg.norm(v)).tolist())
+
+    chosen = pick_representatives(vectors, medoid_local_index=0, k=4)
+    assert chosen[0] == 0
+    assert 1 in chosen and 2 in chosen
+    assert len(chosen) == 5

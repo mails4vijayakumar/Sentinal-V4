@@ -98,3 +98,29 @@ def cluster_per_team(
                 "team": team, "size": len(global_members), "cohesion": cohesion,
             })
     return all_clusters
+
+
+def apply_quality_gate(
+    clusters: list[ClusterRaw],
+    *,
+    min_cohesion: float = 0.65,
+) -> list[ClusterRaw]:
+    """Drop clusters whose pairwise cohesion is below the threshold."""
+    return [c for c in clusters if c.cohesion >= min_cohesion]
+
+
+def pick_representatives(
+    cluster_vectors: list[list[float]],
+    *,
+    medoid_local_index: int,
+    k: int = 4,
+) -> list[int]:
+    """Return local indices: [medoid] + k nearest neighbours by cosine similarity."""
+    vecs = np.array(cluster_vectors)
+    norms = np.linalg.norm(vecs, axis=1, keepdims=True)
+    normed = vecs / np.clip(norms, 1e-12, None)
+    medoid_vec = normed[medoid_local_index]
+    sims = normed @ medoid_vec  # higher = closer
+    sims[medoid_local_index] = -np.inf  # exclude self from neighbour pick
+    top_k = np.argsort(-sims)[:k].tolist()
+    return [medoid_local_index, *top_k]
