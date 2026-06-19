@@ -1,8 +1,34 @@
 """tests/conftest.py — shared fixtures"""
 import asyncio, base64, hashlib, hmac, json, os
+import sys
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+# Agent 8's directory has hyphens; map it to an underscore alias so Python imports work.
+import importlib.util
+import importlib.machinery
+AGENT8_DIR = ROOT / "agents" / "Agent-8-knowledge-synth"
+if AGENT8_DIR.exists() and "agents.Agent_8_knowledge_synth" not in sys.modules:
+    # Create parent 'agents' package if not present
+    if "agents" not in sys.modules:
+        agents_pkg_spec = importlib.machinery.ModuleSpec("agents", loader=None, is_package=True)
+        agents_pkg = importlib.util.module_from_spec(agents_pkg_spec)
+        agents_pkg.__path__ = [str(ROOT / "agents")]
+        sys.modules["agents"] = agents_pkg
+
+    spec = importlib.machinery.ModuleSpec(
+        "agents.Agent_8_knowledge_synth",
+        loader=None,
+        is_package=True,
+    )
+    mod = importlib.util.module_from_spec(spec)
+    mod.__path__ = [str(AGENT8_DIR)]
+    sys.modules["agents.Agent_8_knowledge_synth"] = mod
 
 os.environ.setdefault("REDIS_URL",           "redis://localhost:6379/0")
 os.environ.setdefault("DATABASE_URL",        "postgresql+asyncpg://sentinel:test@localhost:5432/sentinel")
