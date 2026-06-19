@@ -1,0 +1,97 @@
+"""
+agents/Agent-{{N}}-{{NAME}}/main.py
+====================================
+Agent {{N}}: {{PURPOSE}}
+
+Responsibilities:
+  - {{PURPOSE}}
+  - Verify inbound {{UPSTREAM_HEADER}} via HMAC-SHA256
+  - Emit work-note to ServiceNow per §4.6 of CLAUDE.md
+  - Forward enriched event to Agent {{N_NEXT}} on success
+
+This file is intentionally minimal scaffolding. Fill in the marked TODOs.
+"""
+from __future__ import annotations
+
+import asyncio
+import hmac
+import json
+import logging
+import os
+import time
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
+from fastapi import FastAPI, Header, HTTPException, Request, status
+
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+from shared.models import OrchestratorEvent  # type: ignore  # noqa: E402
+
+LOG = logging.getLogger("agent.{{N}}.{{NAME}}")
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(name)s %(message)s")
+
+AGENT_N            = {{N}}
+PORT               = int(os.getenv("AGENT_{{N}}_PORT", "{{PORT}}"))
+SHARED_SECRET      = os.environ.get("AGENT_{{N}}_SHARED_SECRET", "")    # secret this agent EXPECTS on inbound calls
+NEXT_AGENT_SECRET  = os.environ.get("AGENT_{{N_NEXT}}_SECRET", "")      # secret to SEND on outbound calls
+NEXT_AGENT_URL     = os.environ.get("AGENT_{{N_NEXT}}_ENDPOINT", "http://agent-{{N_NEXT}}:{{PORT_NEXT}}/intake/{{NEXT_INTAKE_PATH}}")
+
+
+def _verify_inbound_token(token: str) -> None:
+    """Constant-time check of the inbound shared secret."""
+    if not SHARED_SECRET:
+        raise HTTPException(status_code=500, detail="agent {{N}} not configured (AGENT_{{N}}_SHARED_SECRET missing)")
+    if not token or not hmac.compare_digest(token, SHARED_SECRET):
+        raise HTTPException(status_code=401, detail="invalid inter-agent token")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    LOG.info("agent {{N}} ({{NAME}}) starting on port %d", PORT)
+    yield
+    LOG.info("agent {{N}} ({{NAME}}) stopped")
+
+
+app = FastAPI(title="Sentinel Agent {{N}} — {{NAME}}", lifespan=lifespan)
+
+
+@app.get("/health")
+async def health() -> dict:
+    return {"status": "ok", "agent": AGENT_N, "name": "{{NAME}}"}
+
+
+@app.get("/metrics")
+async def metrics() -> dict:
+    return {"agent": AGENT_N, "intakes": 0}  # TODO: wire real counters
+
+
+@app.post("/intake/{{INTAKE_PATH}}")
+async def intake(
+    request: Request,
+    {{UPSTREAM_HEADER_PYNAME}}: str = Header(..., alias="{{UPSTREAM_HEADER}}"),
+) -> dict:
+    _verify_inbound_token({{UPSTREAM_HEADER_PYNAME}})
+
+    started_at = time.time()
+    body = await request.json()
+
+    # TODO: replace this with the real {{NAME}} logic.
+    LOG.info("agent {{N}} received event keys=%s", sorted(body.keys()))
+
+    # TODO: build downstream payload (see references/integration-points.md).
+    downstream_payload = body
+
+    duration_ms = int((time.time() - started_at) * 1000)
+    LOG.info("agent {{N}} processed in %d ms", duration_ms)
+
+    # TODO: forward to Agent {{N_NEXT}}. Remove this block if {{NAME}} is terminal.
+    # async with httpx.AsyncClient(timeout=10.0) as client:
+    #     resp = await client.post(
+    #         NEXT_AGENT_URL,
+    #         headers={"X-Agent{{N}}-Token": NEXT_AGENT_SECRET},
+    #         json=downstream_payload,
+    #     )
+    #     resp.raise_for_status()
+
+    return {"ok": True, "duration_ms": duration_ms}

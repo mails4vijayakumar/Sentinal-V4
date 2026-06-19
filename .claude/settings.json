@@ -1,0 +1,72 @@
+﻿{
+    "mcpServers":  {},
+    "externalIntegrations":  {
+                                 "confluence":  {
+                                                    "baseUrl":  "https://cognizant-team-cenetene.atlassian.net/wiki/rest/api/content",
+                                                    "type":  "rest-api",
+                                                    "auth":  "bearer-token"
+                                                },
+                                 "splunk":  {
+                                                "baseUrl":  "https://prd-p-fkqwi.splunkcloud.com:8089",
+                                                "type":  "rest-api",
+                                                "auth":  "splunk-hec"
+                                            },
+                                 "pagerduty":  {
+                                                   "baseUrl":  "https://api.pagerduty.com",
+                                                   "type":  "rest-api",
+                                                   "auth":  "bearer-token"
+                                               },
+                                 "dynatrace":  {
+                                                   "baseUrl":  "https://wkf10640.live.dynatrace.com/api/v2",
+                                                   "type":  "rest-api",
+                                                   "auth":  "bearer-token"
+                                               },
+                                 "servicenow":  {
+                                                    "baseUrl":  "https://dev305020.service-now.com/api/now",
+                                                    "type":  "rest-api",
+                                                    "auth":  "basic"
+                                                }
+                             },
+    "metadata":  {
+                     "project":  "Sentinel Agents v4",
+                     "sla":  "60s incident triage",
+                     "integrations":  {
+                                          "confluence":  "cognizant-team-cenetene.atlassian.net/wiki",
+                                          "splunk":  "prd-p-fkqwi.splunkcloud.com",
+                                          "pagerduty":  "api.pagerduty.com",
+                                          "dynatrace":  "wkf10640.live.dynatrace.com",
+                                          "servicenow":  "dev305020.service-now.com"
+                                      }
+                 },
+    "skipAutoPermissionPrompt":  true,
+    "permissions":  {
+                        "defaultMode":  "auto",
+                        "allow":  [
+                                      "Bash(docker ps:*)",
+                                      "Bash(docker images:*)",
+                                      "Bash(curl -s http://localhost:8000/api/*)",
+                                      "Bash(curl -s http://localhost:8001/api/*)",
+                                      "Bash(curl -s http://localhost:8002/api/*)",
+                                      "Bash(curl -s http://localhost:8003/api/*)",
+                                      "Bash(curl -s http://localhost:8004/api/*)",
+                                      "Bash(curl -s http://localhost:8005/api/*)",
+                                      "Bash(curl -s http://localhost:8006/api/*)",
+                                      "Bash(curl -s http://localhost:8007/api/*)",
+                                      "Bash(curl -s http://localhost:800[0-7]/health)",
+                                      "Bash(curl -X POST http://localhost:800[0-7]/*)",
+                                      "Bash(curl -X PUT http://localhost:800[0-7]/*)",
+                                      "Bash(curl -X GET https://dev305020.service-now.com/api/now/*)",
+                                      "Bash(curl -X POST https://dev305020.service-now.com/api/now/*)",
+                                      "Bash(curl -X GET https://wkf10640.live.dynatrace.com/api/v2/*)",
+                                      "Bash(curl -X GET https://prd-p-fkqwi.splunkcloud.com:8089/*)",
+                                      "Bash(curl -X GET https://cognizant-team-cenetene.atlassian.net/wiki/rest/*)",
+                                      "Bash(curl -X GET https://api.pagerduty.com/*)",
+                                      "Bash(curl -X POST https://api.pagerduty.com/*)",
+                                      "Bash(grep -r --include=*.py:*)",
+                                      "Bash(jq:*)",
+                                      "Bash(ps aux | grep python)"
+                                  ]
+                    },
+    "effortLevel":  "high",
+    "theme":  "dark"
+}

@@ -1,0 +1,12 @@
+# Append this class to shared/models.py in the "Enrichment Payloads (agent outputs)"
+# section, immediately after the existing Agent {{N_PREV}} enrichment class
+# (e.g. SplunkEnrichment, ConfluenceEnrichment, …).
+
+class {{NAME_TITLE}}Enrichment(BaseModel):
+    """Agent {{N}} output — {{PURPOSE}}."""
+    model_config = ConfigDict(extra="allow")
+
+    # TODO: replace these placeholder fields with real ones.
+    action:       str            = "skipped"   # "completed" | "degraded" | "skipped"
+    summary:      Optional[str]  = None        # short human-readable outcome
+    evidence_url: Optional[str]  = None        # link to external system (Splunk, GitLab, KB, ...)

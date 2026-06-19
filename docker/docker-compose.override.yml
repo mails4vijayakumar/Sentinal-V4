@@ -1,0 +1,24 @@
+# docker-compose.override.yml — local development overrides
+# Merged automatically: docker compose -f docker-compose.yml up
+version: "3.9"
+services:
+  postgres:
+    ports: ["5432:5432"]
+  redis:
+    ports: ["6379:6379"]
+  routing-db:
+    volumes:
+      - ../routing-db:/app/routing_db:ro
+      - ../shared:/app/shared:ro
+  agent-1:
+    volumes:
+      - ../agents/Agent-1-dynatrace/main.py:/app/main.py:ro
+      - ../shared:/app/shared:ro
+    environment:
+      SQL_ECHO: "true"
+  webapp:
+    build:
+      target: builder
+    command: npm run dev
+    volumes:
+      - ../webapp/src:/app/src:ro

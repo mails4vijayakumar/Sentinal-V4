@@ -1,0 +1,19 @@
+  agent-{{N}}:
+    container_name: sentinel-agent-{{N}}
+    build:
+      context: ..
+      dockerfile: agents/Agent-{{N}}-{{NAME}}/Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      AGENT_{{N}}_PORT:           "{{PORT}}"
+      AGENT_{{N}}_SHARED_SECRET:  ${AGENT_{{N}}_SHARED_SECRET:-}
+      AGENT_{{N_NEXT}}_SECRET:    ${AGENT_{{N_NEXT}}_SECRET:-}
+      AGENT_{{N_NEXT}}_ENDPOINT:  ${AGENT_{{N_NEXT}}_ENDPOINT:-http://agent-{{N_NEXT}}:{{PORT_NEXT}}/intake/{{NEXT_INTAKE_PATH}}}
+    ports: ["{{PORT}}:{{PORT}}"]
+    depends_on:
+      redis:
+        condition: service_healthy
+      routing-db:
+        condition: service_healthy
+    networks: [sentinel-net]

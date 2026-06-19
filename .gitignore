@@ -1,0 +1,42 @@
+# ── Secrets & local overrides ─────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+Codex.local.md
+*.pem
+*.key
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── Node / webapp ────────────────────────────────────────────────────────────
+webapp/node_modules/
+webapp/dist/
+webapp/.vite/
+node_modules/
+
+# ── Docker / data volumes ─────────────────────────────────────────────────────
+postgres-data/
+redis-data/
+ollama-data/
+*.log
+
+# ── IDE / OS ─────────────────────────────────────────────────────────────────
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ── Build artifacts ──────────────────────────────────────────────────────────
+dist/
+build/
+junit-*.xml

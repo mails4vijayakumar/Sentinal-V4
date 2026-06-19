@@ -1,0 +1,20 @@
+{
+  "python.defaultInterpreterPath": "/usr/bin/python3",
+  "python.linting.ruffEnabled": true,
+  "python.linting.enabled": true,
+  "editor.formatOnSave": true,
+  "[python]": { "editor.defaultFormatter": "charliermarsh.ruff" },
+  "[typescript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[typescriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/node_modules": true,
+    "**/dist": true
+  },
+  "docker.environment": {
+    "COMPOSE_FILE": "docker/docker-compose.yml"
+  },
+  "containers.environment": {
+    "COMPOSE_FILE": "docker/docker-compose.yml"
+  }
+}

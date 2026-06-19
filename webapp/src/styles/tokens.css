@@ -1,0 +1,80 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   tokens.css — Sentinel Design Tokens
+   Aesthetic: Industrial operations center. Near-black background,
+   electric amber accent, monospace data, crisp status indicators.
+───────────────────────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* ── Surface ── */
+  --bg-base:      #090B0E;
+  --bg-surface:   #0E1117;
+  --bg-raised:    #141820;
+  --bg-overlay:   #1C2230;
+  --bg-hover:     rgba(245,166,35,0.06);
+
+  /* ── Borders ── */
+  --border:       rgba(255,255,255,0.07);
+  --border-focus: rgba(245,166,35,0.45);
+  --border-active: rgba(245,166,35,0.25);
+
+  /* ── Accent: Electric Amber ── */
+  --amber:        #F5A623;
+  --amber-dim:    rgba(245,166,35,0.15);
+  --amber-glow:   0 0 20px rgba(245,166,35,0.35), 0 0 60px rgba(245,166,35,0.12);
+  --amber-text-glow: 0 0 12px rgba(245,166,35,0.6);
+
+  /* ── Status Colors ── */
+  --red:          #FF4136;
+  --red-dim:      rgba(255,65,54,0.15);
+  --red-glow:     0 0 16px rgba(255,65,54,0.45);
+
+  --green:        #00D4A8;
+  --green-dim:    rgba(0,212,168,0.12);
+  --green-glow:   0 0 14px rgba(0,212,168,0.40);
+
+  --blue:         #3DAAFF;
+  --blue-dim:     rgba(61,170,255,0.12);
+
+  --yellow:       #FFD600;
+  --yellow-dim:   rgba(255,214,0,0.12);
+
+  /* ── Text ── */
+  --text-primary:   #F0F2F5;
+  --text-secondary: #8A94A6;
+  --text-muted:     #4A5568;
+  --text-amber:     #F5A623;
+  --text-code:      #7DD3FC;
+
+  /* ── Severity ── */
+  --sev-p1: #FF4136;
+  --sev-p2: #FF6B2B;
+  --sev-p3: #FFD600;
+  --sev-p4: #00D4A8;
+  --sev-p5: #4A5568;
+
+  /* ── Layout ── */
+  --sidebar-w:    220px;
+  --header-h:     52px;
+  --radius:       6px;
+  --radius-lg:    10px;
+
+  /* ── Typography ── */
+  --font-ui:      'DM Sans', system-ui, sans-serif;
+  --font-mono:    'IBM Plex Mono', 'Courier New', monospace;
+
+  /* ── Transitions ── */
+  --t-fast:  120ms ease;
+  --t-base:  220ms ease;
+  --t-slow:  400ms ease;
+
+  /* ── Scanline texture (subtle ops-center vibe) ── */
+  --scanline: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+}

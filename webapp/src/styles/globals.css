@@ -1,0 +1,143 @@
+@import './tokens.css';
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar              { width: 4px; height: 4px; }
+::-webkit-scrollbar-track        { background: transparent; }
+::-webkit-scrollbar-thumb        { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover  { background: var(--text-muted); }
+
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  grid-template-rows: var(--header-h) 1fr;
+  height: 100dvh;
+  background-image: var(--scanline);
+}
+.app-header  { grid-column: 1 / -1; grid-row: 1; }
+.app-sidebar { grid-column: 1; grid-row: 2; overflow-y: auto; }
+.app-main    { grid-column: 2; grid-row: 2; overflow-y: auto; }
+
+/* ── Cards ── */
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+.card--raised {
+  background: var(--bg-raised);
+}
+
+/* ── Stat badge ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.badge--p1 { background: var(--red-dim);    color: var(--red);   }
+.badge--p2 { background: rgba(255,107,43,.15); color: var(--sev-p2); }
+.badge--p3 { background: var(--yellow-dim); color: var(--yellow); }
+.badge--p4 { background: var(--green-dim);  color: var(--green); }
+.badge--p5 { background: rgba(74,85,104,.2); color: var(--text-muted); }
+.badge--running  { background: var(--amber-dim); color: var(--amber); }
+.badge--completed{ background: var(--green-dim); color: var(--green); }
+.badge--failed   { background: var(--red-dim);   color: var(--red);   }
+
+/* ── Glow pulse animation ── */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; box-shadow: var(--amber-glow); }
+  50%       { opacity: 0.7; box-shadow: none; }
+}
+@keyframes scan {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+@keyframes data-flow {
+  0%   { stroke-dashoffset: 24; }
+  100% { stroke-dashoffset: 0; }
+}
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ── Mono text ── */
+.mono { font-family: var(--font-mono); }
+
+/* ── Amber glow button ── */
+.btn-amber {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  background: var(--amber);
+  color: #000;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+.btn-amber:hover { filter: brightness(1.12); box-shadow: var(--amber-glow); }
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+.btn-ghost:hover {
+  border-color: var(--border-active);
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+/* ── Input ── */
+.input {
+  width: 100%;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 9px 12px;
+  outline: none;
+  transition: border-color var(--t-fast);
+}
+.input:focus  { border-color: var(--border-focus); }
+.input::placeholder { color: var(--text-muted); }

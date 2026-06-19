@@ -1,0 +1,73 @@
+# Agent {{N}} — {{NAME_TITLE}}
+
+**Port:** {{PORT}}
+**Position in chain:** Agent {{N_PREV}} → Agent {{N}} → Agent {{N_NEXT}}
+**Purpose:** {{PURPOSE}}
+
+This file is the per-agent deep dive. Read the repo-level `CLAUDE.md` first for
+the master spec (pipeline flow, event contract chain, work-note format, secret
+naming convention).
+
+## Intake
+
+| Method | Path | Auth header | Source |
+|--------|------|-------------|--------|
+| POST | `/intake/{{INTAKE_PATH}}` | `{{UPSTREAM_HEADER}}` | Agent {{N_PREV}} |
+| GET  | `/health`                | none                  | compose / k8s |
+| GET  | `/metrics`               | none                  | scraper |
+
+## Inputs
+
+Receives the event produced by Agent {{N_PREV}}. The downstream contract is
+defined in `shared/models.py` — fill in the field list once the {{NAME_TITLE}}Enrichment
+model is finalised.
+
+## Outputs
+
+On success, POSTs the enriched event to `AGENT_{{N_NEXT}}_ENDPOINT` with header
+`X-Agent{{N}}-Token: $AGENT_{{N_NEXT}}_SECRET`.
+
+If {{NAME}} is a terminal agent (no forward), delete the outbound block in
+`main.py` and document the side effect here (SNOW write, Redis update, etc.).
+
+## Work-note format
+
+Per §4.6 of the repo `CLAUDE.md`, every agent that runs after the INC exists
+posts an attributed work note. Use this body:
+
+```
+=== {{NAME_UPPER}} — Agent {{N}} ===
+Timestamp : <ISO-8601>
+Status    : <success | degraded | failed>
+Duration  : <ms>
+Pipeline  : <pipeline_run_id>
+
+<stage-specific body — fill in>
+```
+
+## Environment variables
+
+| Variable | Required | Notes |
+|----------|----------|-------|
+| `AGENT_{{N}}_PORT`            | yes | `{{PORT}}` |
+| `AGENT_{{N}}_SHARED_SECRET`   | yes | inbound secret; must match Agent {{N_PREV}}'s `AGENT_{{N}}_SECRET` |
+| `AGENT_{{N_NEXT}}_SECRET`     | yes | outbound secret; must match Agent {{N_NEXT}}'s `AGENT_{{N_NEXT}}_SHARED_SECRET` |
+| `AGENT_{{N_NEXT}}_ENDPOINT`   | no  | defaults to `http://agent-{{N_NEXT}}:{{PORT_NEXT}}/intake/...` |
+| `REDIS_URL`                   | yes | inherited from `x-common-env` |
+| `DATABASE_URL`                | yes | inherited from `x-common-env` |
+
+## Failure modes
+
+| Condition | Behaviour |
+|-----------|-----------|
+| Inbound auth fails | `401` — Agent {{N_PREV}} retries with backoff then DLQs |
+| Downstream agent unreachable | retry → DLQ; pipeline halts unless this agent is non-blocking |
+| External API timeout | TODO: define soft-fail vs hard-fail per §10.2 |
+
+## TODOs before merge
+
+- [ ] Replace stub `intake()` body with real {{NAME}} logic
+- [ ] Add the new event model class to `shared/models.py` (see `references/integration-points.md`)
+- [ ] Wire Agent {{N_PREV}} to forward here
+- [ ] Add real unit tests in `tests/test_agent_{{N}}_{{NAME}}.py`
+- [ ] Decide HIPAA/PHI logging rules per §10.6

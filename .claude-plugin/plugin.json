@@ -1,0 +1,6 @@
+{
+  "name": "sentinel-dev",
+  "version": "0.1.0",
+  "description": "Repo-local Claude Code plugin for Sentinel — scaffolding and workflow skills for the 7-agent incident pipeline.",
+  "author": "Sentinel maintainers"
+}

@@ -1,0 +1,250 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  Sentinel — Docker Compose
+#  Usage: docker compose -f docker/docker-compose.yml up -d
+# ─────────────────────────────────────────────────────────────────────────────
+
+x-agent-base: &agent-base
+  build:
+    context: ..
+    dockerfile: agents/Agent-1-dynatrace/Dockerfile   # overridden per-service
+  restart: unless-stopped
+  networks: [sentinel-net]
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    routing-db:
+      condition: service_healthy
+
+x-common-env: &common-env
+  REDIS_URL:             redis://redis:6379/0
+  DATABASE_URL:          postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+  ROUTING_DB_URL:        http://routing-db:8000
+  ROUTING_DB_ADMIN_TOKEN: ${ROUTING_DB_ADMIN_TOKEN}
+  LLM_PROVIDER:          ${LLM_PROVIDER:-ollama}
+  OLLAMA_BASE_URL:       ${OLLAMA_BASE_URL:-http://ollama:11434}
+  OLLAMA_MODEL:          ${OLLAMA_MODEL:-llama3.1:8b}
+  EMBED_MODEL:           ${EMBED_MODEL:-nomic-embed-text}
+  ANTHROPIC_API_KEY:     ${ANTHROPIC_API_KEY:-}
+  ANTHROPIC_MODEL:       ${ANTHROPIC_MODEL:-claude-sonnet-4-20250514}
+  OPENAI_API_KEY:        ${OPENAI_API_KEY:-}
+  OPENAI_MODEL:          ${OPENAI_MODEL:-gpt-4o-mini}
+  SNOW_BASE_URL:         ${SNOW_BASE_URL:-}
+  SNOW_AUTH_MODE:        ${SNOW_AUTH_MODE:-basic}
+  SNOW_CLIENT_ID:        ${SNOW_CLIENT_ID:-}
+  SNOW_CLIENT_SECRET:    ${SNOW_CLIENT_SECRET:-}
+  SNOW_USERNAME:         ${SNOW_USERNAME:-}
+  SNOW_PASSWORD:         ${SNOW_PASSWORD:-}
+  SNOW_CALLER_ID:        ${SNOW_CALLER_ID:-sentinel.agent}
+  SPLUNK_BASE_URL:       ${SPLUNK_BASE_URL:-}
+  SPLUNK_TOKEN:          ${SPLUNK_TOKEN:-}
+  SPLUNK_INDEX:          ${SPLUNK_INDEX:-main}
+  CONFLUENCE_BASE_URL:   ${CONFLUENCE_BASE_URL:-}
+  CONFLUENCE_TOKEN:      ${CONFLUENCE_TOKEN:-}
+  PD_API_KEY:            ${PD_API_KEY:-}
+  PD_SERVICE_ID:         ${PD_SERVICE_ID:-}
+  PD_FROM_EMAIL:         ${PD_FROM_EMAIL:-sentinel@example.com}
+  TEAMS_WEBHOOK_URL:     ${TEAMS_WEBHOOK_URL:-}
+  SMTP_HOST:             ${SMTP_HOST:-}
+  SMTP_USER:             ${SMTP_USER:-}
+  SMTP_PASS:             ${SMTP_PASS:-}
+  NOTIFY_EMAIL_TO:       ${NOTIFY_EMAIL_TO:-}
+
+services:
+
+  # ── Infrastructure ───────────────────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: sentinel-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB:-sentinel}
+      POSTGRES_USER:     ${POSTGRES_USER:-sentinel}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../routing-db/migrations/001_initial.sql:/docker-entrypoint-initdb.d/001_initial.sql:ro
+      - ../routing-db/seed/dev_seed.sql:/docker-entrypoint-initdb.d/002_seed.sql:ro
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sentinel} -d ${POSTGRES_DB:-sentinel}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [sentinel-net]
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: sentinel-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes: [redis-data:/data]
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks: [sentinel-net]
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: sentinel-ollama
+    restart: unless-stopped
+    volumes: [ollama-data:/root/.ollama]
+    ports: ["11434:11434"]
+    profiles: [ollama]
+    networks: [sentinel-net]
+
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: sentinel-ollama-init
+    depends_on: [ollama]
+    entrypoint: >
+      sh -c "sleep 5 &&
+             ollama pull ${OLLAMA_MODEL:-llama3.1:8b} &&
+             ollama pull ${EMBED_MODEL:-nomic-embed-text}"
+    profiles: [ollama]
+    networks: [sentinel-net]
+
+  # ── Routing DB ────────────────────────────────────────────────────────────
+  routing-db:
+    container_name: sentinel-routing-db
+    build:
+      context: ..
+      dockerfile: routing-db/docker/Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL:   postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      ADMIN_TOKEN:    ${ROUTING_DB_ADMIN_TOKEN:-change-me-admin-token}
+      READ_TOKEN:     ${ROUTING_DB_READ_TOKEN:-}
+      LOG_LEVEL:      ${LOG_LEVEL:-INFO}
+    ports: ["8000:8000"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+    networks: [sentinel-net]
+
+  # ── Agents ────────────────────────────────────────────────────────────────
+  agent-1:
+    container_name: sentinel-agent-1
+    build:
+      context: ..
+      dockerfile: agents/Agent-1-dynatrace/Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      AGENT_1_PORT:       "8001"
+      DT_WEBHOOK_SECRET:  ${DT_WEBHOOK_SECRET:-}
+      SNOW_WEBHOOK_SECRET: ${SNOW_WEBHOOK_SECRET:-}
+    ports: ["8001:8001"]
+    depends_on:
+      redis:
+        condition: service_healthy
+      routing-db:
+        condition: service_healthy
+    networks: [sentinel-net]
+
+  agent-2:
+    container_name: sentinel-agent-2
+    build:
+      context: ..
+      dockerfile: agents/Agent-2-splunk/Dockerfile
+    restart: unless-stopped
+    environment: { <<: *common-env, AGENT_2_PORT: "8002" }
+    ports: ["8002:8002"]
+    depends_on: { redis: { condition: service_healthy }, routing-db: { condition: service_healthy } }
+    networks: [sentinel-net]
+
+  agent-3:
+    container_name: sentinel-agent-3
+    build:
+      context: ..
+      dockerfile: agents/Agent-3-servicenow/Dockerfile
+    restart: unless-stopped
+    environment: { <<: *common-env, AGENT_3_PORT: "8003" }
+    ports: ["8003:8003"]
+    depends_on: { redis: { condition: service_healthy }, routing-db: { condition: service_healthy } }
+    networks: [sentinel-net]
+
+  agent-4:
+    container_name: sentinel-agent-4
+    build:
+      context: ..
+      dockerfile: agents/Agent-4-pagerduty/Dockerfile
+    restart: unless-stopped
+    environment: { <<: *common-env, AGENT_4_PORT: "8004" }
+    ports: ["8004:8004"]
+    depends_on: { redis: { condition: service_healthy }, routing-db: { condition: service_healthy } }
+    networks: [sentinel-net]
+
+  agent-5:
+    container_name: sentinel-agent-5
+    build:
+      context: ..
+      dockerfile: agents/Agent-5-notifications/Dockerfile
+    restart: unless-stopped
+    environment: { <<: *common-env, AGENT_5_PORT: "8005" }
+    ports: ["8005:8005"]
+    depends_on: { redis: { condition: service_healthy }, routing-db: { condition: service_healthy } }
+    networks: [sentinel-net]
+
+  agent-6:
+    container_name: sentinel-agent-6
+    build:
+      context: ..
+      dockerfile: agents/Agent-6-confluence/Dockerfile
+    restart: unless-stopped
+    environment: { <<: *common-env, AGENT_6_PORT: "8006" }
+    ports: ["8006:8006"]
+    depends_on: { redis: { condition: service_healthy }, routing-db: { condition: service_healthy } }
+    networks: [sentinel-net]
+
+  agent-7:
+    container_name: sentinel-agent-7
+    build:
+      context: ..
+      dockerfile: agents/Agent-7-Rca/Dockerfile
+    restart: unless-stopped
+    environment: { <<: *common-env, AGENT_7_PORT: "8007" }
+    ports: ["8007:8007"]
+    depends_on: { redis: { condition: service_healthy }, routing-db: { condition: service_healthy } }
+    networks: [sentinel-net]
+
+  # ── Webapp (React) ────────────────────────────────────────────────────────
+  webapp:
+    container_name: sentinel-webapp
+    build:
+      context: ..
+      dockerfile: webapp/Dockerfile
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE: ${VITE_API_BASE:-http://localhost:8001}
+    ports: ["3000:80"]
+    networks: [sentinel-net]
+
+  # ── Nginx reverse proxy ───────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: sentinel-nginx
+    restart: unless-stopped
+    ports: ["80:80"]
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on: [agent-1, webapp]
+    networks: [sentinel-net]
+
+networks:
+  sentinel-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  ollama-data:
