@@ -34,7 +34,7 @@ async def finalize_run(
     await conn.execute(
         """
         UPDATE kb_synthesis_runs
-        SET status=$2, counts=$3, error_message=$4, stage_durations=$5, finished_at=NOW()
+        SET status=$2, counts=$3::jsonb, error_message=$4, stage_durations=$5::jsonb, finished_at=NOW()
         WHERE run_id=$1
         """,
         run_id, status, json.dumps(counts), error,
@@ -92,7 +92,7 @@ async def insert_article(
             source_incident_ids, confidence_score, llm_self_rating, cluster_cohesion,
             embedding_title, embedding_full, embedding_model_version
         )
-        VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+        VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12,$13,$14,$15::vector,$16::vector,$17)
         RETURNING id
         """,
         cluster_signature, version, title, problem_summary, root_cause,

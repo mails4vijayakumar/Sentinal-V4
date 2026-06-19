@@ -23,10 +23,9 @@ async def upsert_article_versioned(
     confidence_score: float,
 ) -> UUID:
     """Insert a new version row, then deactivate prior versions for the same signature."""
-    prior = await q.latest_version_for_signature(conn, cluster_signature)
-    new_version = (prior or 0) + 1
-
     async with conn.transaction():
+        prior = await q.latest_version_for_signature(conn, cluster_signature)
+        new_version = (prior or 0) + 1
         article_id = await q.insert_article(
             conn,
             cluster_signature=cluster_signature,
