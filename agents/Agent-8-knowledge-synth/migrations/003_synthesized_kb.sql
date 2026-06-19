@@ -29,8 +29,8 @@ CREATE TABLE IF NOT EXISTS sentinel_synthesized_kb (
 
 CREATE INDEX IF NOT EXISTS idx_skb_active    ON sentinel_synthesized_kb (is_active);
 CREATE INDEX IF NOT EXISTS idx_skb_assigngrp ON sentinel_synthesized_kb (assignment_group) WHERE is_active;
-CREATE INDEX IF NOT EXISTS idx_skb_title_vec ON sentinel_synthesized_kb USING ivfflat (embedding_title vector_cosine_ops);
-CREATE INDEX IF NOT EXISTS idx_skb_full_vec  ON sentinel_synthesized_kb USING ivfflat (embedding_full vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS idx_skb_title_vec ON sentinel_synthesized_kb USING hnsw (embedding_title vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS idx_skb_full_vec  ON sentinel_synthesized_kb USING hnsw (embedding_full vector_cosine_ops);
 
 CREATE TABLE IF NOT EXISTS kb_synthesis_runs (
   run_id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),

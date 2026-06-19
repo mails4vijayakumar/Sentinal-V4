@@ -13,6 +13,7 @@ def test_settings_defaults(monkeypatch):
     assert s.synth_quality_score_floor == 0.40
     assert s.synth_dedup_update_threshold == 0.92
     assert s.synth_publish_confluence is True
+    assert s.synth_admin_token is None
 
 
 @pytest.mark.unit

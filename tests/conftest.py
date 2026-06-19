@@ -39,6 +39,8 @@ os.environ.setdefault("SNOW_BASE_URL",       "https://snow.example.com")
 os.environ.setdefault("SNOW_AUTH_MODE",      "basic")
 os.environ.setdefault("SNOW_USERNAME",       "test")
 os.environ.setdefault("SNOW_PASSWORD",       "test")
+os.environ.setdefault("SNOW_CLIENT_ID",     "test-client-id")
+os.environ.setdefault("SNOW_CLIENT_SECRET", "test-client-secret")
 os.environ.setdefault("ROUTING_DB_URL",      "http://localhost:8000")
 os.environ.setdefault("ROUTING_DB_ADMIN_TOKEN", "test-admin-token")
 

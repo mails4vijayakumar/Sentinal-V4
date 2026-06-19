@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Optional
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -31,7 +33,7 @@ class Settings(BaseSettings):
     synth_publish_confluence: bool = Field(default=True, alias="SYNTH_PUBLISH_CONFLUENCE")
     synth_confluence_space: str = Field(default="AUTO_KB", alias="SYNTH_CONFLUENCE_SPACE")
     synth_retire_low_feedback: bool = Field(default=True, alias="SYNTH_RETIRE_LOW_FEEDBACK")
-    synth_admin_token: str = Field(default="", alias="SYNTH_ADMIN_TOKEN")
+    synth_admin_token: Optional[str] = Field(default=None, alias="SYNTH_ADMIN_TOKEN")
     synth_max_concurrent_synthesize: int = Field(default=10, alias="SYNTH_MAX_CONCURRENT_SYNTHESIZE")
 
     # Confluence (already used by Agent 6)

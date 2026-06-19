@@ -5,8 +5,7 @@ from fastapi import FastAPI
 
 from agents.Agent_8_knowledge_synth.config import get_settings
 
-logger = logging.getLogger("agent8")
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Agent 8 - Knowledge Synthesizer", version="0.1.0")
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field, ConfigDict
@@ -54,6 +54,7 @@ class ClusterResult(BaseModel):
 
 
 class RunCounts(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     extracted: int = 0
     filtered: int = 0
     clustered: int = 0
@@ -72,8 +73,9 @@ class DecisionType:
 
 
 class SynthesisDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     cluster_signature: str
-    decision: str
+    decision: Literal["create", "update", "review", "skip"]
     article_id: Optional[UUID] = None
     similarity_score: Optional[float] = None
     notes: Optional[str] = None
