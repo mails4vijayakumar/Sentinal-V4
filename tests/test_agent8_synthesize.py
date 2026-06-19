@@ -84,3 +84,14 @@ async def test_synthesize_one_returns_none_on_validation_failure():
     cluster = _cluster([_member(f"INC{i}") for i in range(5)])
     article = await synthesize_one(provider, cluster)
     assert article is None
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_synthesize_one_returns_none_on_provider_exception():
+    provider = AsyncMock()
+    provider.complete_structured = AsyncMock(side_effect=RuntimeError("provider down"))
+
+    cluster = _cluster([_member(f"INC{i}") for i in range(5)])
+    article = await synthesize_one(provider, cluster)
+    assert article is None
