@@ -5,9 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Sentinel — Master Specification
 
 Fully automated healthcare IT incident triage pipeline. Dynatrace alerts flow
-through 7 FastAPI microservices, enriched via DynaTrace / Splunk / ServiceNow / PagerDuty /
+through 8 FastAPI microservices (7 on the realtime critical path + 1 monthly batch knowledge synthesizer), enriched via DynaTrace / Splunk / ServiceNow / PagerDuty /
 Confluence / RCA, resolved by LLM-powered RCA in under 60 seconds. A React dashboard renders the pipeline live over SSE.
-The pipeline has **two entry points**. The primary flow (DT-originated, P1 / P2 / P3) runs the full 7-agent chain. The secondary flow (SNOW-originated, P4 / P5 manually created by customer support) runs an enrichment-only fan-out — no incident creation, no notification, just evidence-gathering work notes posted back to the existing SNOW record.
+The pipeline has **two entry points**. The primary flow (DT-originated, P1 / P2 / P3) runs the full 7-agent chain. The secondary flow (SNOW-originated, P4 / P5 manually created by customer support) runs an enrichment-only fan-out — no incident creation, no notification, just evidence-gathering work notes posted back to the existing SNOW record. **Agent 8** (Knowledge Synthesizer) runs off the critical path on a monthly cron — it mines the previous month's closed SNOW incidents, clusters them per assignment group, and synthesises versioned KB articles into pgvector (and optionally Confluence `AUTO_KB`) for Agents 2/6 and the chatbot to read.
 
 This system is deployed in a healthcare environment and processes incident data that may contain sensitive operational and patient-context information. This file is the canonical project guide. Read §1–4 to orient, §5–9 when implementing or debugging, §10–12 for VS Code.
 
@@ -25,7 +25,7 @@ Regulatory compliance policy (HIPAA Privacy Rule, Security Rule, BAA requirement
 2. Repository Layout
 3. Quick Start (VS Code)
 4. Pipeline Architecture (4.1 Flow A · 4.2 Flow B · 4.3 Routing · 4.4 Agents · 4.5 Event Contract · 4.6 Work-note rule · 4.7 Webapp routes · 4.8 Chatbot)
-5. Per-Agent Reference
+5. Per-Agent Reference (5.1–5.7 realtime · 5.8 Agent 8 Knowledge Synthesizer)
 6. Inter-Agent Contract
 7. Shared State (7.1 Redis · 7.2 SNOW lifecycle · 7.3 Routing database)
 8. External Integrations
@@ -56,6 +56,7 @@ sentinel/
 │   ├── Agent-5-notifications/            # Agent 5 — :8005 — Teams / Email / PD trigger / SMS
 │   ├── Agent-6-confluence/               # Agent 6 — :8006 — KB search + scoring + attach
 │   ├── Agent-7-Rca/                      # Agent 7 — :8007 — RCA, deployments, rollback, resolution monitor
+│   ├── Agent-8-knowledge-synth/          # Agent 8 — :8008 — monthly KB synthesis from closed SNOW incidents (off critical path)
 │   └── requirements.txt                  # shared Python deps
 │                                         # Each agent has its own AGENTS.md inside its directory
 ├── routing-db/                   # Routing service — :8000 — owns PostgreSQL routing tables, migrations, admin API
@@ -113,6 +114,7 @@ sentinel/
 │   ├── diagnose_agent6_cql.py
 │   ├── verify_agent6_fix.py
 │   ├── migrate_sqlite_to_pg.py         # one-off: migrate routing data SQLite → Postgres
+│   ├── backfill_synthesized_kb.py      # Agent 8: backfill N prior months via POST /jobs/synthesize
 │   └── redis_server.py                 # local Redis dev launcher
 ├── docker/
 │   ├── docker-compose.yml
@@ -155,7 +157,7 @@ docker compose -f docker/docker-compose.yml down -v    # drop ALL data
 ```
 
 The `--profile ollama` flag starts a local Ollama container alongside the
-7 agents + routing-db + Redis + Postgres + webapp. The default LLM provider in
+8 agents (1–7 realtime + 8 batch synthesizer) + routing-db + Redis + Postgres + webapp. The default LLM provider in
 `docker-compose.yml` is `LLM_PROVIDER=ollama` with `OLLAMA_MODEL=llama3.1:8b`
 and `EMBED_MODEL=nomic-embed-text`. **Embeddings always run locally via Ollama**
 regardless of which chat provider is selected — never sent to a cloud LLM. To
@@ -180,10 +182,10 @@ By default this preserves rows whose `source = 'admin'` (runtime overrides made 
 ### Single agent (dev — hot reload)
 ```bash
 # Each agent is a flat single-file FastAPI app — `main.py`, not `app.main`.
-cd agents/Agent-1-dynatrace            # or Agent-2-splunk, …, Agent-7-Rca (capital R)
+cd agents/Agent-1-dynatrace            # or Agent-2-splunk, …, Agent-7-Rca (capital R), Agent-8-knowledge-synth
 pip install -r ../requirements.txt
 export PYTHONPATH=$(pwd)/../..         # shared/ must be importable
-uvicorn main:app --reload --port 8001  # port = 8000 + agent number; 8000 is routing-db
+uvicorn main:app --reload --port 8001  # port = 8000 + agent number; 8000 is routing-db; Agent 8 = 8008
 ```
 
 ### Webapp (dev)
@@ -219,13 +221,23 @@ python scripts/demo_p1_incidents.py
 # Pre-go-live checks:
 python scripts/verify_snow_schema.py    # confirms u_* fields exist on SNOW incident table
 python scripts/audit_cmdb.py            # SNOW CI gap report
+
+# Agent 8 — backfill the previous N months of synthesised KB articles (first-deploy task):
+SYNTH_ADMIN_TOKEN="$(grep '^SYNTH_ADMIN_TOKEN=' .env | cut -d= -f2)" \
+  python scripts/backfill_synthesized_kb.py --months 3
+
+# Agent 8 — trigger an ad-hoc synthesis run for a custom window:
+curl -X POST http://localhost:8008/jobs/synthesize \
+  -H "X-Synth-Admin-Token: $SYNTH_ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"window_start":"2026-05-01","window_end":"2026-05-31"}'
 ```
 
 ---
 
 ## 4. Pipeline Architecture
 
-The system has two flows triggered by two entry points. Both run on the same 7 agents — the second flow is a subset.
+The system has two flows triggered by two entry points. Both run on the same 7 realtime agents — the second flow is a subset. Agent 8 is independent of both flows: it runs monthly on closed-incident history and writes KB articles that Agents 2/6 and the chatbot consume on subsequent runs.
 
 ### 4.1 Flow A — DT-originated (P1 / P2 / P3)
 
@@ -301,6 +313,7 @@ Agent 1 inspects the entry point and the incoming priority/source to choose the 
 | 5 | notifications | 8005 | Parallel Teams/Email/PD trigger/SMS; PD for P1/P2/P3; P4+ suppressed (Flow A only)            |
 | 6 | confluence  | 8006 | Confluence 3-tier CQL, 6-factor scoring, KB attach; same in both flows                          |
 | 7 | rca         | 8007 | Rca + Splunk + Davis + DT Logs; 4-signal RCA in Flow A; deployment+log scan in Flow B        |
+| 8 | knowledge-synth | 8008 | Monthly cron + admin endpoint. Extract closed SNOW incidents → PHI scrub → cluster (HDBSCAN) → LLM synthesise → upsert to pgvector → optional Confluence publish → retire low-utility articles. Off the 60-s critical path. |
 | – | webapp      | 3000 | React dashboard — routes: `/` live view, `/reports` aggregates, `/chat` full-page assistant |
 
 The agent **named** for a vendor is not the only consumer of that vendor's API. SNOW, for instance, is written to by agents 3, 4, 5, 6, and 7 — only agent 3 is named for it because it owns the create/bind. PagerDuty Schedules is queried by agent 4; PagerDuty Events v2 is fired by agent 5. The naming reflects primary ownership, not exclusivity. See §8 for the full integration matrix.
@@ -510,6 +523,34 @@ The `entity_project_map` table (§7.3) maps Dynatrace entity IDs (preferred) and
 
 **Flow B (enrichment-only mode).** When called by Agent 1 directly with a `ManualIncidentEvent`, Agent 7 runs two queries instead of the full 4-signal model: (1) **GitLab recent deployments** for the inferred service in a 24-hour lookback, and (2) **Dynatrace Grail DQL** (`POST /platform/storage/query/v1/query:execute`) for matching log events around the incident's `opened_at`. The DQL adapter lives at [`agents/Agent-7-Rca/dt_grail_client.py`](agents/Agent-7-Rca/dt_grail_client.py) — OAuth2 client-credentials grant against `DT_OAUTH_TOKEN_URL` with scope `storage:logs:read`, bearer cached in-memory until expiry minus 60 s. Posts a single work note: "Recent deployments: …; matching DT log events: …". No confidence verdict, no rollback recommendation — the engineer interprets the evidence themselves. On trial tenants without a Platform OAuth client, set `DT_LOGS_ENABLED=false` and the deployments-only path runs (degradable per §10.2).
 
+### 5.8 Agent 8 — Knowledge Synthesizer (`:8008`)
+
+**Off the realtime critical path.** Triggered by APScheduler on a monthly cron (`SYNTH_SCHEDULE_CRON`, default day 1 at 02:00) and on-demand via `POST /jobs/synthesize` with `X-Synth-Admin-Token`. No 60-s SLA, no inter-agent chain — runs to completion or fails the run record cleanly.
+
+Pipeline (single sequence, owned by `orchestrator.py`):
+
+```
+extract → normalize → phi_scrub → embed → cluster → quality-gate
+       → synthesize (LLM) → dedup → upsert → publish (Confluence) → retire
+```
+
+`queries.py` is the only file with raw SQL; `main.py` is the only file with FastAPI routes + APScheduler.
+
+**Inputs:** closed SNOW incidents in the previous month, grouped by `assignment_group`.
+**Outputs:** versioned KB articles in `sentinel_synthesized_kb` (pgvector); optional Confluence publication into `SYNTH_CONFLUENCE_SPACE` (default `AUTO_KB`). Consumers (Agents 2/6, the chatbot) read pgvector directly — Agent 8 never pushes to them.
+
+**Dedup decision bands** (cosine similarity vs nearest existing article in pgvector):
+
+| Similarity | Decision | Behaviour |
+|---|---|---|
+| ≥ `SYNTH_DEDUP_UPDATE_THRESHOLD` (0.92) | `update` | in-place version bump on the existing article |
+| ≥ `SYNTH_DEDUP_REVIEW_THRESHOLD` (0.80) | `review` | flagged for human attention in `kb_synthesis_decisions` |
+| < 0.80 | `new` | new article inserted |
+
+Run-level observability lives in `kb_synthesis_runs` (status, counts, stage durations) and `kb_synthesis_decisions` (per-cluster outcome). Failure modes, ad-hoc-run/backfill commands, and the full SQL inspection cookbook are in [`agents/Agent-8-knowledge-synth/AGENTS.md`](agents/Agent-8-knowledge-synth/AGENTS.md) — keep operational detail there rather than duplicating it here.
+
+**PHI handling.** `phi_scrub.py` is applied **before** any incident text crosses the LLM boundary, using the same patterns as Agent 1's chatbot scrubber (§10.6). Synthesised articles are scrubbed again on the way back from the LLM as defence-in-depth.
+
 ---
 
 ## 6. Inter-Agent Contract
@@ -546,6 +587,7 @@ Convention: the **sender** holds `AGENT{N+1}_SECRET` (next hop's secret); the **
 | 6     | POST   | `/intake/enrichment`              | `X-Agent1-Token`   | Flow B fan-out target       |
 | 7     | POST   | `/intake/kb-enriched-event`       | `X-Agent6-Token`   | Flow A                      |
 | 7     | POST   | `/intake/enrichment`              | `X-Agent1-Token`   | Flow B fan-out target       |
+| 8     | POST   | `/jobs/synthesize`                | `X-Synth-Admin-Token` | Ad-hoc synthesis run for `{window_start, window_end}` (backfill + debugging); empty token disables endpoint |
 | 1     | GET    | `/api/events`                     | `?token=` query param | Dashboard SSE stream (EventSource limitation — no header support) |
 | 1     | GET    | `/api/pipeline/{problem_id}`      | `X-Dashboard-Token`| Dashboard problem detail    |
 | all   | GET    | `/health`                         | none               |                             |
@@ -656,7 +698,7 @@ The 5-minute cache eliminates almost all the latency cost of the network hop. Ca
 | Dynatrace Problems API   | 1, 7            | `problems.read` (1: webhook payloads; 7: precise startTime + Davis) |
 | Dynatrace Grail DQL      | 7               | Platform OAuth client (`storage:logs:read`, `storage:events:read`) → `POST /platform/storage/query/v1/query:execute`. Agent 7 Flow B log enrichment around the manual incident's `opened_at`. Trial tenants set `DT_LOGS_ENABLED=false` (deployments-only fallback per §10.2). |
 | Splunk REST              | 2, 7            | search jobs API (2: classify; 7: pre/post-deploy log timeline) |
-| ServiceNow Table API     | 1, 3, 4, 5, 6, 7| OAuth2 client credentials, cached token; `itil` role required. Ag 1 reads for pre-existence check; Ag 3+ write |
+| ServiceNow Table API     | 1, 3, 4, 5, 6, 7, 8| OAuth2 client credentials, cached token; `itil` role required. Ag 1 reads for pre-existence check; Ag 3+ write; Ag 8 reads closed incidents in monthly windows for clustering |
 | ServiceNow CMDB          | 3               | `cmdb_ci` lookup (graceful degradation if missing) |
 | ServiceNow Business Rule | 1               | Outbound webhook on `incident.insert` → `POST /webhook/snow-incident` (Flow B trigger) |
 | PagerDuty Schedules      | 4               | resolves on-call user → email → SNOW sys_id |
@@ -664,13 +706,14 @@ The 5-minute cache eliminates almost all the latency cost of the network hop. Ca
 | Microsoft Teams          | 5               | webhook per team; success = response body `"1"` literal |
 | Email backend            | 5               | SendGrid or AWS SES |
 | SMS backend              | 5               | Twilio or AWS SNS (P1-infra only; managers on escalation) |
-| Confluence Cloud REST    | 6               | 3-tier CQL search + page body storage format |
-| PostgreSQL (`sentinel`)  | all agents (RAG), 6, 1 (chat) | Single shared DB. pgvector tables (`sentinel_kb_articles`, `sentinel_incident_patterns`, `sentinel_incidents`, `sentinel_rca_history`) via `VECTOR_DB_URL`. Agent 6: `kb_recommendations` feedback. Agent 1: `chat_conversations` + `chat_messages`. |
+| Confluence Cloud REST    | 6, 8            | 6: 3-tier CQL search + page body storage format. 8: write-only publish of synthesised articles into `SYNTH_CONFLUENCE_SPACE` (default `AUTO_KB`). |
+| PostgreSQL (`sentinel`)  | all agents (RAG), 6, 1 (chat), 8 | Single shared DB. pgvector tables (`sentinel_kb_articles`, `sentinel_incident_patterns`, `sentinel_incidents`, `sentinel_rca_history`) via `VECTOR_DB_URL`. Agent 6: `kb_recommendations` feedback. Agent 1: `chat_conversations` + `chat_messages`. Agent 8: `sentinel_synthesized_kb`, `kb_synthesis_runs`, `kb_synthesis_decisions` (migration `003_synthesized_kb.sql`). |
 | GitLab API               | 7               | `read_api`: deployments, commits, diffs, pipelines (rollback POST) |
 | Routing DB service       | 1, 6, 7         | internal HTTP service (port 8000); see §7.3 and `routing-db/CLAUDE.md` |
 | LLM provider (chatbot)   | 1 (chat only)   | Anthropic Claude API, OpenAI API, or Ollama (local). Configured via `LLM_PROVIDER`. All calls originate at Agent 1's chat orchestrator — never from the browser or from other agents |
+| LLM provider (synthesis) | 8               | Same pluggable provider abstraction as the chatbot, configured via `SYNTH_LLM_MODEL` (default `llama3.1:70b`). Used for cluster-level KB synthesis; concurrency bounded by `SYNTH_MAX_CONCURRENT_SYNTHESIZE` (default 10). |
 
-Stateful components: Redis (dedup, bindings), PostgreSQL (routing-db tables + Agent 6 feedback + chat history). Each needs its own backup story before go-live; use `pg_dump` for logical PostgreSQL backups or your cloud provider's automated snapshot feature.
+Stateful components: Redis (dedup, bindings), PostgreSQL (routing-db tables + Agent 6 feedback + chat history + Agent 8 synthesised KB). Each needs its own backup story before go-live; use `pg_dump` for logical PostgreSQL backups or your cloud provider's automated snapshot feature.
 
 ---
 
@@ -731,6 +774,11 @@ This table is the **canonical list of what `.env.example` and `docker/docker-com
 | Notifications  | `SMTP_USER`                    | 5       | |
 | Notifications  | `SMTP_PASS`                    | 5       | |
 | Notifications  | `NOTIFY_EMAIL_TO`              | 5       | default ops distribution list |
+| Agent 8        | `SYNTH_SCHEDULE_CRON`          | 8       | APScheduler cron expression; default `"0 2 1 * *"` (day 1 of every month at 02:00) |
+| Agent 8        | `SYNTH_ADMIN_TOKEN`            | 8       | Bearer token for `POST /jobs/synthesize`. Empty value disables the endpoint. **Required in production.** |
+| Agent 8        | `SYNTH_PUBLISH_CONFLUENCE`     | 8       | `true` (default) \| `false` — flip to `false` to disable Confluence side-effects while iterating on prompts |
+| Agent 8        | `SYNTH_CONFLUENCE_SPACE`       | 8       | target Confluence space key; default `AUTO_KB` |
+| Agent 8        | `SYNTH_LLM_MODEL`              | 8       | synthesis model; default `llama3.1:70b`; override per provider (e.g. `claude-sonnet-4-...`, `gpt-4o`) |
 | Webapp (build) | `VITE_API_BASE`                | webapp  | public URL of Agent 1 from browser; default `http://localhost:8001` |
 | Webapp (build) | `VITE_ROUTING_DB_BASE`         | webapp  | public URL of routing-db; default `http://localhost:8000` |
 
@@ -758,6 +806,15 @@ This table is the **canonical list of what `.env.example` and `docker/docker-com
 | `RESOLUTION_POLL_INTERVAL_SECONDS`  | 300     | 7       | DT close-state poll cadence (5 min) |
 | `RESOLUTION_MAX_POLLS`              | 72      | 7       | 72 × 5min = 6 h watchdog |
 | `REGRESSION_CONFIDENCE_THRESHOLD`   | 75.0    | 7       | min confidence to recommend rollback |
+| `SYNTH_MIN_CLUSTER_SIZE`            | 5       | 8       | HDBSCAN minimum cluster size; lower for low-volume teams |
+| `SYNTH_MIN_SAMPLES`                 | 3       | 8       | HDBSCAN min_samples (core-point density floor) |
+| `SYNTH_MIN_CLUSTER_COHESION`        | 0.65    | 8       | HDBSCAN cluster cohesion floor; clusters below this are dropped |
+| `SYNTH_QUALITY_SCORE_FLOOR`         | 0.40    | 8       | incidents below this quality score are filtered before clustering |
+| `SYNTH_DEDUP_UPDATE_THRESHOLD`      | 0.92    | 8       | cosine sim ≥ this → in-place version bump on existing article |
+| `SYNTH_DEDUP_REVIEW_THRESHOLD`      | 0.80    | 8       | cosine sim in [0.80, 0.92) → `decision='review'`; below → new article |
+| `SYNTH_MAX_CONCURRENT_SYNTHESIZE`   | 10      | 8       | semaphore limit for LLM synthesis fan-out within a run |
+| `SYNTH_LLM_MAX_TOKENS_PER_RUN`      | 500000  | 8       | **reserved** for future per-run token budget; not yet enforced — set provider-side quota instead |
+| `SYNTH_RETIRE_LOW_FEEDBACK`         | true    | 8       | when true, low-utility articles are flagged for retirement at the end of each run |
 
 ### 9.3 Chatbot environment variables
 
@@ -826,8 +883,12 @@ Only Agent 1 has the always-200 rule, because only Agent 1 receives traffic from
 | LLM provider unreachable (chatbot)     | No        | `/api/chat/stream` returns `error` event; pipeline is unaffected; switch `LLM_PROVIDER` env var |
 | LLM tool-loop hits `LLM_MAX_TOOL_LOOPS`| No        | stream emits `error` event; bot responds "stopped after N steps"; no pipeline impact |
 | Chat Postgres unavailable              | No (chat only) | `CHAT_PERSISTENCE_BACKEND` auto-degrades to session memory; bot still works, history not persisted |
+| LLM provider unreachable (Ag 8)        | No (off critical path) | per-cluster `synthesize_one` returns `None`; decision row written with `decision='skip'`; run finalises `succeeded` with `counts.skipped` populated; rerun the window via `POST /jobs/synthesize` after provider recovers |
+| SNOW throttle during Ag 8 extraction   | No (off critical path) | shared retry contract (2/4/8s); on final-attempt failure, run finalises `failed` with `error_message`; no partial articles created |
+| Confluence publish failure (Ag 8)      | No        | article stays in pgvector with `is_active=TRUE` and `confluence_page_id=NULL`; next run retries publication |
+| APScheduler missed-fire (Ag 8)         | No        | `misfire_grace_time=3600` — if Agent 8 was down at 02:00 and comes up by 03:00 the run still fires; beyond that, trigger via the admin endpoint |
 
-Principle: only **Agent 3's create** is allowed to halt the pipeline. Everything else degrades so the engineer still gets a paged incident with whatever evidence was gatherable.
+Principle: only **Agent 3's create** is allowed to halt the pipeline. Everything else degrades so the engineer still gets a paged incident with whatever evidence was gatherable. Agent 8 has no pipeline impact by construction — failures stay inside the monthly batch and surface in `kb_synthesis_runs`.
 
 ### 10.3 Observability
 
@@ -840,6 +901,7 @@ Every agent ships structured JSON logs (structlog) with `pipeline_run_id` on eve
 | 1     | 90%     | severity_mapper 100%, security 100%, dedup 95% |
 | 2     | 90%     | pre_classifier 100%, query_builder 95% |
 | 3–7   | 90%     | per `.claude/rules/testing.md` |
+| 8     | 90%     | `phi_scrub.py` 100%, `dedup.py` decision bands 100%, `orchestrator.py` stage-error paths 95% |
 
 ### 10.5 Implementation invariants
 
