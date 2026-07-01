@@ -1,12 +1,10 @@
 """
-Baseline parity test for the Agent 1 main.py refactor (PR1).
+Parity contract for Agent 1's DT and SNOW webhook endpoints.
 
-This file is written and committed BEFORE the refactor. Its purpose is to
-fail loudly if the extraction changes any observable behaviour — response
-status, response body shape, or Redis side effects.
-
-Do NOT edit this test to match new behaviour. If it breaks during the
-refactor, the refactor is wrong.
+These tests define the observable HTTP contract: status codes, response
+body shapes, and error details. Any change to response status, body
+shape, or error detail requires deliberate review — do not modify these
+tests casually to make them pass.
 """
 import json
 from datetime import datetime, timezone

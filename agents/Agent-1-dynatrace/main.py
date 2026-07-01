@@ -17,7 +17,6 @@ Responsibilities:
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import json
 import logging
 import os
@@ -26,7 +25,7 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 import uvicorn
-from fastapi import FastAPI, Header, HTTPException, Request, status
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 # Adjust import path when running as a container
@@ -39,11 +38,6 @@ from shared.models import (
 )
 from shared.redis_client import STREAM_DASHBOARD, STREAM_RUN_PREFIX, get_redis
 from shared.routing_client import get_routing_client, fire_and_forget
-
-from ._common import (
-    DT_SECRET,
-    _DT_SEVERITY_MAP,
-)
 from .intake import dt as dt_intake
 from .intake import snow as snow_intake
 
