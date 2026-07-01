@@ -22,6 +22,13 @@
 - **If you hit an ambiguity not covered here, STOP and ask** — this is a healthcare incident pipeline; silent wrong guesses are worse than a pause.
 - **Spec reference:** `docs/superpowers/specs/2026-06-30-agent-1-alertmanager-intake-design.md`
 
+## Locked Decisions (resolved during planning)
+
+- **Import shape:** Repo uses `agents/Agent_1_dynatrace/__init__.py` underscore alias. Test imports read `from agents.Agent_1_dynatrace.main import app`. Subagent should verify the alias file exists; if not, create it to re-export from the hyphenated dir.
+- **Circular import resolution:** Extract shared symbols (`DT_SECRET`, `SNOW_SECRET`, `DynatracePayload`, `ServiceNowPayload`, `_DT_SEVERITY_MAP`, `_SNOW_PRIORITY_MAP`, `verify_hmac_signature`) into `agents/Agent-1-dynatrace/_common.py`. Both `main.py` and `intake/*.py` import from `_common`. No lazy imports.
+- **Routing-db dependency (PR2):** Add `get_am_entity(key) -> None` stub to `shared/routing_client.py` returning `None`. Resolver soft-fails to DT-name lookup until the real routing-db spec ships and swaps the stub.
+- **SSE event on auto-resolve (PR2):** Reuse existing `SSEEventType.PIPELINE_COMPLETE` with `data={"outcome": "auto_resolved", "source": "alertmanager", ...}`. No enum change.
+
 ---
 
 # PR1 — Pure extraction refactor (zero behavior change)
