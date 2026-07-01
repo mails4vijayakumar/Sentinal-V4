@@ -86,6 +86,64 @@ async def test_resolve_failure_enqueues_dlq(monkeypatch):
     assert result == {"dlq": True}
 
 
+@pytest.mark.asyncio
+async def test_ingest_with_dlq_returns_dlq_true_even_when_enqueue_fails(monkeypatch):
+    """
+    Finding #1 fix test: _ingest_with_dlq returns {"dlq": True} even when
+    _enqueue_dlq itself raises (e.g., Redis down).
+    """
+    redis_mock = AsyncMock()
+    redis_mock._redis = AsyncMock()
+    # _redis.set raises RuntimeError — simulating Redis being down
+    redis_mock._redis.set.side_effect = RuntimeError("Redis down")
+    monkeypatch.setattr(am_module, "get_redis", AsyncMock(return_value=redis_mock))
+
+    failing_ingest = AsyncMock(side_effect=RuntimeError("ingest boom"))
+
+    result = await _ingest_with_dlq(_evt(), failing_ingest)
+
+    # The wrapper MUST return {"dlq": True} even when enqueue fails
+    assert result == {"dlq": True}
+
+
+@pytest.mark.asyncio
+async def test_sweep_failure_preserves_expires_at_ttl(monkeypatch):
+    """
+    Finding #2 fix test: sweep write-back computes remaining TTL from
+    expires_at rather than resetting to 86400, ensuring 24h-from-creation
+    semantics.
+    """
+    from datetime import datetime, timezone, timedelta
+
+    # Create an entry with expires_at = 5000 seconds from now
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(seconds=5000)
+    initial = {
+        "event": _evt().model_dump(mode="json"),
+        "kind": "ingest",
+        "first_failed_at": now.isoformat(),
+        "expires_at": expires_at.isoformat(),
+        "attempts": 1,
+        "last_error": "old",
+    }
+    redis_mock = AsyncMock()
+    redis_mock._redis = AsyncMock()
+    redis_mock._redis.scan_iter = lambda pattern: _aiter(["am_dlq:am-test1"])
+    redis_mock._redis.get = AsyncMock(return_value=json.dumps(initial).encode())
+    monkeypatch.setattr(am_module, "get_redis", AsyncMock(return_value=redis_mock))
+    monkeypatch.setattr(am_module, "_ingest", AsyncMock(side_effect=RuntimeError("still down")))
+
+    await sweep_am_dlq()
+
+    # Capture the redis.set call on failure branch
+    args, kwargs = redis_mock._redis.set.call_args
+    captured_ex = kwargs["ex"]
+
+    # The captured TTL should be approximately 5000 (within a few seconds),
+    # NOT 86400 (which would be a full 24h reset)
+    assert 4990 <= captured_ex <= 5010, f"Expected ~5000, got {captured_ex}"
+
+
 # ── Sweep tests ───────────────────────────────────────────────────────────────
 
 @pytest.mark.asyncio

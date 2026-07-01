@@ -28,7 +28,7 @@ import json
 import logging
 import os
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Awaitable, Callable, Literal, Optional
 
 import httpx
@@ -375,12 +375,20 @@ _ingest: Optional[Callable] = None
 
 
 async def _enqueue_dlq(external_id: str, payload: dict, kind: str, error: Exception) -> None:
-    """Persist a failed dispatch to the Redis DLQ for later retry."""
+    """
+    Persist a failed dispatch to the Redis DLQ for later retry.
+
+    Stores expires_at on first creation (only when the key doesn't already exist)
+    to enforce 24h TTL from creation, not from last retry.
+    """
     redis = await get_redis()
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(seconds=DLQ_TTL_SECONDS)
     entry = {
         "event":           payload,
         "kind":            kind,
-        "first_failed_at": datetime.utcnow().isoformat() + "Z",
+        "first_failed_at": now.isoformat(),
+        "expires_at":      expires_at.isoformat(),
         "attempts":        0,
         "last_error":      str(error)[:500],
     }
@@ -404,12 +412,18 @@ async def _ingest_with_dlq(event: OrchestratorEvent, ingest_fn: Callable) -> dic
     try:
         return await ingest_fn(event)
     except Exception as exc:
-        await _enqueue_dlq(
-            event.external_id,
-            event.model_dump(mode="json"),
-            "ingest",
-            exc,
-        )
+        try:
+            await _enqueue_dlq(
+                event.external_id,
+                event.model_dump(mode="json"),
+                "ingest",
+                exc,
+            )
+        except Exception as dlq_exc:
+            log.error(
+                "am_metric event=dlq_enqueue_failed external_id=%s error=%s",
+                event.external_id, dlq_exc,
+            )
         log.error(
             "am_dlq_enqueued external_id=%s kind=ingest error=%s",
             event.external_id, exc,
@@ -424,12 +438,18 @@ async def _resolve_with_dlq(external_id: str, resolve_fn: Callable) -> dict:
     try:
         return await resolve_fn(external_id)
     except Exception as exc:
-        await _enqueue_dlq(
-            external_id,
-            {"external_id": external_id},
-            "resolve",
-            exc,
-        )
+        try:
+            await _enqueue_dlq(
+                external_id,
+                {"external_id": external_id},
+                "resolve",
+                exc,
+            )
+        except Exception as dlq_exc:
+            log.error(
+                "am_metric event=dlq_enqueue_failed external_id=%s error=%s",
+                external_id, dlq_exc,
+            )
         log.error(
             "am_dlq_enqueued external_id=%s kind=resolve error=%s",
             external_id, exc,
@@ -488,7 +508,15 @@ async def sweep_am_dlq() -> None:
         except Exception as exc:
             entry["attempts"] += 1
             entry["last_error"] = str(exc)[:500]
-            await redis._redis.set(key, json.dumps(entry), ex=DLQ_TTL_SECONDS)
+            # Compute remaining TTL from persisted expires_at (24h-from-creation semantic)
+            try:
+                expires_at = datetime.fromisoformat(entry["expires_at"])
+                remaining_seconds = max(1, int((expires_at - datetime.now(timezone.utc)).total_seconds()))
+            except (KeyError, ValueError):
+                # Legacy entry (pre-fix) — assume 24h from now as a bounded migration path
+                log.debug("am_legacy_dlq_entry key=%s missing_or_invalid_expires_at", key)
+                remaining_seconds = DLQ_TTL_SECONDS
+            await redis._redis.set(key, json.dumps(entry), ex=remaining_seconds)
             log.warning(
                 "am_dlq_retry_failed key=%s attempts=%d error=%s",
                 key, entry["attempts"], exc,
