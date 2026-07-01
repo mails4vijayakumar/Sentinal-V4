@@ -27,6 +27,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class IncidentSource(str, enum.Enum):
     DYNATRACE   = "dynatrace"
     SERVICENOW  = "servicenow"
+    ALERTMANAGER = "alertmanager"
 
 class IncidentFlow(str, enum.Enum):
     PRIMARY   = "primary"    # DT P1/P2/P3 → full 7-agent chain
@@ -110,6 +111,10 @@ class OrchestratorEvent(BaseModel):
     dedup_key:   Optional[str]    = None   # used for idempotency lock
     host:        Optional[str]    = None   # primary affected host
     service:     Optional[str]    = None   # primary affected service/app
+
+    # Populated by AM intake (optional for other sources)
+    environment:  Optional[str] = None
+    am_group_key: Optional[str] = None
 
 
 # ── Pipeline State ────────────────────────────────────────────────────────────
