@@ -29,7 +29,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import Any, Awaitable, Callable, Literal
+from typing import Any, Awaitable, Callable, Literal, Optional
 
 import httpx
 from fastapi import HTTPException, Request
@@ -193,20 +193,22 @@ async def handle(
     same_batch_flap    = [fp for fp in resolved_fps if fp     in firing_fps]
     decoupled_resolved = [fp for fp in resolved_fps if fp not in firing_fps]
 
-    # Phase 1: ingest all firing events concurrently
+    # Phase 1: ingest all firing events concurrently.
+    # return_exceptions=False is safe — _ingest_with_dlq catches and enqueues.
     ingest_results = await asyncio.gather(
-        *(_ingest(e) for e in firing), return_exceptions=True
+        *(_ingest_with_dlq(e, _ingest) for e in firing), return_exceptions=False,
     )
 
     # Phase 2: process same-batch flap resolves SEQUENTIALLY after ingest
     flap_results: list[Any] = []
     for fp in same_batch_flap:
-        flap_results.append(await _resolve_cb(fp))
+        flap_results.append(await _resolve_with_dlq(fp, _resolve_cb))
 
-    # Phase 3: process decoupled resolves concurrently
+    # Phase 3: process decoupled resolves concurrently.
+    # return_exceptions=False is safe — _resolve_with_dlq catches and enqueues.
     decoupled_results = await asyncio.gather(
-        *(_resolve_cb(fp) for fp in decoupled_resolved),
-        return_exceptions=True,
+        *(_resolve_with_dlq(fp, _resolve_cb) for fp in decoupled_resolved),
+        return_exceptions=False,
     )
 
     accepted   = sum(
@@ -349,3 +351,145 @@ def _resolve_worknote(external_id: str) -> str:
         f"Source    : alertmanager fingerprint={fp}\n"
         "Note      : External monitoring reported condition cleared.\n"
     )
+
+
+# ── Dead-Letter Queue (DLQ) ───────────────────────────────────────────────────
+#
+# Redis-backed retry envelope for AM dispatch failures.
+# Keys: am_dlq:{external_id}  TTL: 24 h
+# Sweep cadence: 5 min (loop runs in main.py lifespan via _sweep_loop).
+# Max retries: 5. Exhausted entries are left in place until TTL expiry so
+# operators can inspect them; they are logged at ERROR level.
+#
+# Adjustment #1 (private Redis API): uses redis._redis.{set,get,delete,scan_iter}
+# directly — consistent with PR2's _resolve() pattern. Public helpers
+# (.get/.set/.delete/.scan_iter) will be added to RedisClient in a follow-up
+# ticket and both _resolve() and this module will be updated together.
+
+DLQ_TTL_SECONDS = 86400   # 24 h
+DLQ_MAX_ATTEMPTS = 5
+
+# Module-level reference to the ingest function. None in production until
+# sweep_am_dlq() resolves it via lazy import; monkeypatched in tests.
+_ingest: Optional[Callable] = None
+
+
+async def _enqueue_dlq(external_id: str, payload: dict, kind: str, error: Exception) -> None:
+    """Persist a failed dispatch to the Redis DLQ for later retry."""
+    redis = await get_redis()
+    entry = {
+        "event":           payload,
+        "kind":            kind,
+        "first_failed_at": datetime.utcnow().isoformat() + "Z",
+        "attempts":        0,
+        "last_error":      str(error)[:500],
+    }
+    await redis._redis.set(
+        f"am_dlq:{external_id}",
+        json.dumps(entry),
+        ex=DLQ_TTL_SECONDS,
+    )
+    log.info(
+        "am_metric event=dlq_enqueued kind=%s external_id=%s",
+        kind, external_id,
+    )
+
+
+async def _ingest_with_dlq(event: OrchestratorEvent, ingest_fn: Callable) -> dict:
+    """
+    Call ingest_fn(event). On failure, enqueue to DLQ and return {"dlq": True}.
+    Ensures asyncio.gather(..., return_exceptions=False) never sees a raised
+    exception from this wrapper — the 202 contract with AM is preserved.
+    """
+    try:
+        return await ingest_fn(event)
+    except Exception as exc:
+        await _enqueue_dlq(
+            event.external_id,
+            event.model_dump(mode="json"),
+            "ingest",
+            exc,
+        )
+        log.error(
+            "am_dlq_enqueued external_id=%s kind=ingest error=%s",
+            event.external_id, exc,
+        )
+        return {"dlq": True}
+
+
+async def _resolve_with_dlq(external_id: str, resolve_fn: Callable) -> dict:
+    """
+    Call resolve_fn(external_id). On failure, enqueue to DLQ and return {"dlq": True}.
+    """
+    try:
+        return await resolve_fn(external_id)
+    except Exception as exc:
+        await _enqueue_dlq(
+            external_id,
+            {"external_id": external_id},
+            "resolve",
+            exc,
+        )
+        log.error(
+            "am_dlq_enqueued external_id=%s kind=resolve error=%s",
+            external_id, exc,
+        )
+        return {"dlq": True}
+
+
+async def sweep_am_dlq() -> None:
+    """
+    Scan Redis for am_dlq:* keys and retry each entry.
+
+    - Entries with attempts >= DLQ_MAX_ATTEMPTS are logged at ERROR and left
+      in place (Adjustment #4 — exhausted entries kept for operator inspection;
+      24h TTL handles cleanup).
+    - Successful retries: key deleted.
+    - Failed retries: attempts incremented, updated entry re-written with
+      remaining TTL (DLQ_TTL_SECONDS reset — 24h from now).
+
+    Called by _sweep_loop() in main.py every 5 minutes (Adjustment #3).
+    The lazy import of the production _ingest function avoids a circular
+    import at module-load time (intake.alertmanager ↔ main).
+    """
+    global _ingest
+    # Resolve the ingest function: use the module-level override (test monkeypatch)
+    # or fall back to the lazy import from main (production).
+    ingest_fn = _ingest
+    if ingest_fn is None:
+        from main import _ingest as _main_ingest  # lazy: avoids circular import at load
+        ingest_fn = _main_ingest
+
+    redis = await get_redis()
+    async for key in redis._redis.scan_iter("am_dlq:*"):
+        raw = await redis._redis.get(key)
+        if not raw:
+            continue
+        entry = json.loads(raw)
+
+        if entry["attempts"] >= DLQ_MAX_ATTEMPTS:
+            log.error(
+                "am_metric event=dlq_exhausted key=%s last_error=%s",
+                key, entry["last_error"],
+            )
+            # Key left in place — TTL (24h) will clean up (Adjustment #4).
+            continue
+
+        try:
+            if entry["kind"] == "ingest":
+                await ingest_fn(OrchestratorEvent(**entry["event"]))
+            else:
+                await _resolve(entry["event"]["external_id"])
+            await redis._redis.delete(key)
+            log.info(
+                "am_metric event=dlq_swept outcome=success external_id=%s",
+                entry.get("event", {}).get("external_id", key),
+            )
+        except Exception as exc:
+            entry["attempts"] += 1
+            entry["last_error"] = str(exc)[:500]
+            await redis._redis.set(key, json.dumps(entry), ex=DLQ_TTL_SECONDS)
+            log.warning(
+                "am_dlq_retry_failed key=%s attempts=%d error=%s",
+                key, entry["attempts"], exc,
+            )

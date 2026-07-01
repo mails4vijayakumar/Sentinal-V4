@@ -53,8 +53,31 @@ AGENT_NAME       = "dynatrace"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("Agent 1 (dynatrace) starting on :%d", PORT)
+    sweep_task = asyncio.create_task(_sweep_loop())
     yield
+    sweep_task.cancel()
+    try:
+        await sweep_task
+    except asyncio.CancelledError:
+        pass
     log.info("Agent 1 shutdown")
+
+
+async def _sweep_loop() -> None:
+    """
+    5-minute periodic sweep of the AM DLQ.
+
+    Mirrors Agent 7's worker_loop pattern — registered once in lifespan,
+    runs for the lifetime of the process, and is cancelled on shutdown.
+    Cadence (Adjustment #3): 300 s. Tests call sweep_am_dlq() directly;
+    they do NOT exercise this loop.
+    """
+    while True:
+        try:
+            await am_intake.sweep_am_dlq()
+        except Exception as exc:
+            log.error("am_sweep_loop_error: %s", exc)
+        await asyncio.sleep(300)  # 5-minute cadence; tune later
 
 
 app = FastAPI(title="Sentinel Agent 1 — Dynatrace Ingestion", lifespan=lifespan)
