@@ -34,40 +34,25 @@ from pydantic import ValidationError
 import sys
 sys.path.insert(0, "/app")
 
-from shared.auth import verify_hmac_signature
 from shared.models import (
-    DynatracePayload, ServiceNowPayload,
     IncidentFlow, IncidentSource, OrchestratorEvent, PipelineRun,
     Severity, SSEEvent, SSEEventType,
 )
 from shared.redis_client import STREAM_DASHBOARD, STREAM_RUN_PREFIX, get_redis
 from shared.routing_client import get_routing_client, fire_and_forget
 
+from ._common import (
+    DT_SECRET, SNOW_SECRET,
+    _DT_SEVERITY_MAP, _SNOW_PRIORITY_MAP,
+    DynatracePayload, ServiceNowPayload,
+    verify_hmac_signature,
+)
+from .intake import dt as dt_intake
+
 log = logging.getLogger(__name__)
 
 PORT             = int(os.getenv("AGENT_1_PORT", "8001"))
-DT_SECRET        = os.getenv("DT_WEBHOOK_SECRET", "")
-SNOW_SECRET      = os.getenv("SNOW_WEBHOOK_SECRET", "")
 AGENT_NAME       = "dynatrace"
-
-# DT severity → internal priority
-_DT_SEVERITY_MAP = {
-    "AVAILABILITY": Severity.CRITICAL,   # P1
-    "PERFORMANCE":  Severity.HIGH,       # P2
-    "ERROR":        Severity.MEDIUM,     # P3
-    "RESOURCE":     Severity.MEDIUM,     # P3
-    "CUSTOM":       Severity.LOW,        # P4
-    "INFO":         Severity.INFO,       # P5
-}
-
-# SNOW priority number → internal Severity
-_SNOW_PRIORITY_MAP = {
-    "1": Severity.CRITICAL,
-    "2": Severity.HIGH,
-    "3": Severity.MEDIUM,
-    "4": Severity.LOW,
-    "5": Severity.INFO,
-}
 
 
 # ── App lifecycle ─────────────────────────────────────────────────────────────
@@ -104,50 +89,10 @@ async def ready():
 
 @app.post("/api/webhook/dynatrace", status_code=202)
 async def dynatrace_webhook(
-    request:     Request,
+    request:        Request,
     x_dt_signature: str | None = Header(None, alias="X-DT-Signature"),
 ):
-    body = await request.body()
-
-    # Signature verification
-    if DT_SECRET:
-        if not x_dt_signature or not verify_hmac_signature(body, x_dt_signature, DT_SECRET):
-            raise HTTPException(status_code=401, detail="Invalid DT signature")
-
-    try:
-        payload = DynatracePayload.model_validate_json(body)
-    except ValidationError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
-
-    # Only process OPEN problems; ignore RESOLVED (handled by monitoring)
-    if payload.status.upper() == "RESOLVED":
-        return {"accepted": False, "reason": "RESOLVED events are ignored"}
-
-    severity = _DT_SEVERITY_MAP.get(payload.severity.upper(), Severity.INFO)
-    flow     = IncidentFlow.PRIMARY if severity in (
-        Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM
-    ) else IncidentFlow.SECONDARY
-
-    host    = payload.impactedEntities[0]["name"] if payload.impactedEntities else None
-    service = next(
-        (t.split(":", 1)[1] for t in payload.tags if t.startswith("app:")),
-        None,
-    )
-
-    event = OrchestratorEvent(
-        source=IncidentSource.DYNATRACE,
-        external_id=payload.problemId,
-        severity=severity,
-        flow=flow,
-        title=payload.displayName,
-        raw_payload=payload.model_dump(),
-        host=host,
-        service=service,
-        dedup_key=f"dt:{payload.problemId}",
-    )
-
-    result = await _ingest(event)
-    return result
+    return await dt_intake.handle(request, x_dt_signature, _ingest)
 
 
 # ── SNOW webhook ──────────────────────────────────────────────────────────────
