@@ -125,7 +125,7 @@ def _to_event(alert: AMAlert, group_key: str) -> OrchestratorEvent | None:
             raw_sev, labels["alertname"],
         )
         log.info(
-            "am_metric event=alerts_dropped reason=unmapped_severity fingerprint=%s",
+            "am_metric event=severity_defaulted reason=unmapped_severity fingerprint=%s",
             alert.fingerprint,
         )
         sev = Severity.INFO

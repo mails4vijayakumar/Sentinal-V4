@@ -306,6 +306,9 @@ async def test_resolve_no_binding_returns_no_binding(monkeypatch):
     import agents.Agent_1_dynatrace.intake.alertmanager as am_module
     from agents.Agent_1_dynatrace.intake.alertmanager import _resolve
 
+    # Ensure SNOW_BASE is set so we don't short-circuit with "snow_disabled"
+    monkeypatch.setattr(am_module, "SNOW_BASE", "https://snow.test")
+
     redis_mock = AsyncMock()
     redis_mock._redis = AsyncMock()
     redis_mock._redis.get = AsyncMock(return_value=None)
