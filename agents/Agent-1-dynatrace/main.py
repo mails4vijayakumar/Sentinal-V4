@@ -26,7 +26,7 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 import uvicorn
-from fastapi import FastAPI, Header, Request, status
+from fastapi import FastAPI, Header, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 
 # Adjust import path when running as a container
