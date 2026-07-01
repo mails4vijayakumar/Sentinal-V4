@@ -331,6 +331,9 @@ async def test_resolve_source_tool_mismatch_refuses_close(monkeypatch):
     import agents.Agent_1_dynatrace.intake.alertmanager as am_module
     from agents.Agent_1_dynatrace.intake.alertmanager import _resolve
 
+    # Ensure SNOW_BASE is set so we don't short-circuit with "snow_disabled"
+    monkeypatch.setattr(am_module, "SNOW_BASE", "https://snow.test")
+
     # Redis: binding exists
     redis_mock = AsyncMock()
     redis_mock._redis = AsyncMock()

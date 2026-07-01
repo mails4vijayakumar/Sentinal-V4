@@ -150,7 +150,7 @@ def _to_event(alert: AMAlert, group_key: str) -> OrchestratorEvent | None:
         external_id  = f"am-{alert.fingerprint}",
         severity     = sev,
         flow         = flow,
-        title        = alert.annotations.get("summary") or labels["alertname"],
+        title        = labels["alertname"],
         host         = labels.get("instance"),
         service      = labels.get("service") or labels.get("job"),
         environment  = labels.get("environment", os.getenv("AM_DEFAULT_ENV", "prod")),
