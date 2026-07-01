@@ -71,8 +71,10 @@ async def process_run(run_id: str):
         headers = {"Authorization": token, "Content-Type": "application/json",
                    "Accept": "application/json"}
         enrichment: ServiceNowEnrichment
+        source = event.get("source", "dynatrace")
         if flow == "primary":
-            enrichment = await _create_incident(headers, severity, title, ext_id, host, splunk)
+            enrichment = await _create_incident(headers, severity, title, ext_id, host, splunk,
+                                                source=source)
         else:
             enrichment = await _bind_incident(headers, ext_id)
 
@@ -100,7 +102,8 @@ async def process_run(run_id: str):
 _IMPACT = {"P1": "1", "P2": "2", "P3": "3", "P4": "4", "P5": "5"}
 _URGENCY = {"P1": "1", "P2": "2", "P3": "3", "P4": "4", "P5": "5"}
 
-async def _create_incident(headers, severity, title, ext_id, host, splunk) -> ServiceNowEnrichment:
+async def _create_incident(headers, severity, title, ext_id, host, splunk,
+                          source: str = "dynatrace") -> ServiceNowEnrichment:
     if not SNOW_BASE:
         return ServiceNowEnrichment(action="skipped")
     async with httpx.AsyncClient(base_url=SNOW_BASE, headers=headers, timeout=15) as c:
@@ -112,6 +115,11 @@ async def _create_incident(headers, severity, title, ext_id, host, splunk) -> Se
             "caller_id": os.getenv("SNOW_CALLER_ID", "sentinel.agent"),
             "description": f"Automated incident from Sentinel. DT ID: {ext_id}\nAffected host: {host}",
         }
+        if source == "alertmanager":
+            body["u_source_tool"]    = "Alertmanager"
+            body["u_source_alert_id"] = ext_id[3:] if ext_id.startswith("am-") else ext_id
+        else:
+            body["u_source_tool"] = "Dynatrace"
         resp = await c.post(f"/api/now/table/{_INC_TABLE}", json=body)
         resp.raise_for_status()
         rec = resp.json()["result"]
