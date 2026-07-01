@@ -26,28 +26,26 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 import uvicorn
-from fastapi import FastAPI, Header, HTTPException, Request, status
+from fastapi import FastAPI, Header, Request, status
 from fastapi.responses import StreamingResponse
-from pydantic import ValidationError
 
 # Adjust import path when running as a container
 import sys
 sys.path.insert(0, "/app")
 
 from shared.models import (
-    IncidentFlow, IncidentSource, OrchestratorEvent, PipelineRun,
-    Severity, SSEEvent, SSEEventType,
+    OrchestratorEvent, PipelineRun,
+    SSEEvent, SSEEventType,
 )
 from shared.redis_client import STREAM_DASHBOARD, STREAM_RUN_PREFIX, get_redis
 from shared.routing_client import get_routing_client, fire_and_forget
 
 from ._common import (
-    DT_SECRET, SNOW_SECRET,
-    _DT_SEVERITY_MAP, _SNOW_PRIORITY_MAP,
-    DynatracePayload, ServiceNowPayload,
-    verify_hmac_signature,
+    DT_SECRET,
+    _DT_SEVERITY_MAP,
 )
 from .intake import dt as dt_intake
+from .intake import snow as snow_intake
 
 log = logging.getLogger(__name__)
 
@@ -102,36 +100,7 @@ async def servicenow_webhook(
     request:          Request,
     x_snow_signature: str | None = Header(None, alias="X-SNOW-Signature"),
 ):
-    body = await request.body()
-
-    if SNOW_SECRET:
-        if not x_snow_signature or not verify_hmac_signature(body, x_snow_signature, SNOW_SECRET):
-            raise HTTPException(status_code=401, detail="Invalid SNOW signature")
-
-    try:
-        payload = ServiceNowPayload.model_validate_json(body)
-    except ValidationError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
-
-    severity = _SNOW_PRIORITY_MAP.get(str(payload.priority), Severity.INFO)
-    flow     = IncidentFlow.PRIMARY if severity in (
-        Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM
-    ) else IncidentFlow.SECONDARY
-
-    event = OrchestratorEvent(
-        source=IncidentSource.SERVICENOW,
-        external_id=payload.number,
-        severity=severity,
-        flow=flow,
-        title=payload.short_description,
-        raw_payload=payload.model_dump(),
-        host=payload.cmdb_ci,
-        service=payload.cmdb_ci,
-        dedup_key=f"snow:{payload.number}",
-    )
-
-    result = await _ingest(event)
-    return result
+    return await snow_intake.handle(request, x_snow_signature, _ingest)
 
 
 # ── Core ingestion logic ──────────────────────────────────────────────────────
