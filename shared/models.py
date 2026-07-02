@@ -151,6 +151,17 @@ class PipelineRun(BaseModel):
 
 # ── Enrichment Payloads (agent outputs) ───────────────────────────────────────
 
+class RuleMatch(BaseModel):
+    """One scored regex hit from Agent 2's classifier."""
+    model_config = ConfigDict(extra="allow")
+
+    rule_id:     str
+    rule_set:    str            # "app" | "infra" | "db"
+    weight:      float
+    match_count: int
+    sample_line: str
+
+
 class SplunkEnrichment(BaseModel):
     """Agent 2 output — Splunk log analysis."""
     model_config = ConfigDict(extra="allow")
@@ -164,6 +175,22 @@ class SplunkEnrichment(BaseModel):
     spl_query:         Optional[str]         = None
     llm_summary:       Optional[str]         = None   # LLM-generated narrative
     classification:    Optional[str]         = None   # "db_timeout" | "oom" | "network" | etc.
+
+    # ── Six-phase classifier additions (see docs/superpowers/specs/2026-07-01-agent-2-spec-closure-design.md) ──
+    tier_used:         Optional[int]         = None
+    spl_queries:       List[str]             = Field(default_factory=list)
+    rule_matches:      List[RuleMatch]       = Field(default_factory=list)
+
+    dt_hypothesis:     Optional[str]         = None
+    splunk_category:   Optional[str]         = None
+    confidence:        float                 = 0.0
+    hypothesis_source: str                   = "dt"
+
+    error_category:    Optional[str]         = None
+    assigned_team:     Optional[str]         = None
+    assigned_queue:    Optional[str]         = None
+    snow_category:     Optional[str]         = None
+    snow_subcategory:  Optional[str]         = None
 
 
 class ServiceNowEnrichment(BaseModel):
