@@ -310,8 +310,7 @@ async def test_resolve_no_binding_returns_no_binding(monkeypatch):
     monkeypatch.setattr(am_module, "SNOW_BASE", "https://snow.test")
 
     redis_mock = AsyncMock()
-    redis_mock._redis = AsyncMock()
-    redis_mock._redis.get = AsyncMock(return_value=None)
+    redis_mock.get = AsyncMock(return_value=None)
     monkeypatch.setattr(am_module, "get_redis", AsyncMock(return_value=redis_mock))
 
     result = await _resolve("am-orphan")
@@ -336,8 +335,7 @@ async def test_resolve_source_tool_mismatch_refuses_close(monkeypatch):
 
     # Redis: binding exists
     redis_mock = AsyncMock()
-    redis_mock._redis = AsyncMock()
-    redis_mock._redis.get = AsyncMock(return_value=_json.dumps({
+    redis_mock.get = AsyncMock(return_value=_json.dumps({
         "incident_sys_id": "abc",
         "incident_number": "INC1",
         "run_id": "r1",

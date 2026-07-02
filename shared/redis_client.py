@@ -152,6 +152,30 @@ class RedisClient:
     async def publish_signal(self, channel: str, message: Dict[str, Any]) -> None:
         await self._redis.publish(channel, json.dumps(message, default=str))
 
+    # ── Public passthrough helpers ────────────────────────────────────────────
+    # Thin delegates to the underlying redis.asyncio.Redis for arbitrary
+    # GET/SET/DELETE/SCAN_ITER operations. Callers should use these instead of
+    # reaching into `self._redis.X`, so `_redis` stays an implementation detail.
+
+    async def get(self, key: str) -> Optional[str]:
+        return await self._redis.get(key)
+
+    async def set(
+        self,
+        key: str,
+        value: str,
+        *,
+        ex: Optional[int] = None,
+        nx: bool = False,
+    ) -> Any:
+        return await self._redis.set(key, value, ex=ex, nx=nx)
+
+    async def delete(self, *keys: str) -> int:
+        return await self._redis.delete(*keys)
+
+    def scan_iter(self, pattern: str) -> AsyncIterator[str]:
+        return self._redis.scan_iter(pattern)
+
     # ── Health check ──────────────────────────────────────────────────────────
     async def ping(self) -> bool:
         try:
