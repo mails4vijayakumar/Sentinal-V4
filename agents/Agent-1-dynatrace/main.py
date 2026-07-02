@@ -40,6 +40,7 @@ from shared.redis_client import STREAM_DASHBOARD, STREAM_RUN_PREFIX, get_redis
 from shared.routing_client import get_routing_client, fire_and_forget
 from .intake import dt as dt_intake
 from .intake import snow as snow_intake
+from .intake import alertmanager as am_intake
 
 log = logging.getLogger(__name__)
 
@@ -95,6 +96,18 @@ async def servicenow_webhook(
     x_snow_signature: str | None = Header(None, alias="X-SNOW-Signature"),
 ):
     return await snow_intake.handle(request, x_snow_signature, _ingest)
+
+
+# ── Alertmanager webhook ───────────────────────────────────────────────────────
+
+@app.post("/api/webhook/alertmanager", status_code=202)
+async def alertmanager_webhook(
+    request:       Request,
+    authorization: str | None = Header(None),
+):
+    return await am_intake.handle(
+        request, authorization, _ingest, am_intake._resolve,
+    )
 
 
 # ── Core ingestion logic ──────────────────────────────────────────────────────

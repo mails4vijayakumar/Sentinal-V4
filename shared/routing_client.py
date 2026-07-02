@@ -105,6 +105,11 @@ class RoutingClient:
                 return None
             raise
 
+    # ── AM entity resolution ──────────────────────────────────────────────────
+    async def get_am_entity(self, key: str) -> Optional[Dict[str, Any]]:
+        """Stub for am_entity_map table lookup — see 2026-06-30 AM intake spec §7-8."""
+        return None
+
     # ── Health ────────────────────────────────────────────────────────────────
     async def ping(self) -> bool:
         try:

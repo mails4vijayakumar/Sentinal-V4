@@ -143,6 +143,9 @@ services:
       AGENT_1_PORT:       "8001"
       DT_WEBHOOK_SECRET:  ${DT_WEBHOOK_SECRET:-}
       SNOW_WEBHOOK_SECRET: ${SNOW_WEBHOOK_SECRET:-}
+      AM_WEBHOOK_TOKEN:   ${AM_WEBHOOK_TOKEN:-}
+      AM_INTAKE_ENABLED:  ${AM_INTAKE_ENABLED:-false}
+      AM_DEFAULT_ENV:     ${AM_DEFAULT_ENV:-prod}
     ports: ["8001:8001"]
     depends_on:
       redis:
