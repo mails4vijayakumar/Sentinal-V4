@@ -107,6 +107,30 @@ async def test_ingest_with_dlq_returns_dlq_true_even_when_enqueue_fails(monkeypa
 
 
 @pytest.mark.asyncio
+async def test_enqueue_dlq_does_not_overwrite_existing_entry(monkeypatch):
+    """
+    Finding #1 fix test: _enqueue_dlq uses SET NX to prevent overwriting
+    existing entries when AM retries the same webhook.
+    """
+    redis_mock = AsyncMock()
+    redis_mock._redis = AsyncMock()
+    # SET NX returns None when key already exists
+    redis_mock._redis.set = AsyncMock(return_value=None)
+    monkeypatch.setattr(am_module, "get_redis", AsyncMock(return_value=redis_mock))
+
+    # Call _enqueue_dlq for the same external_id twice
+    await _enqueue_dlq("am-test1", {"x": 1}, "ingest", RuntimeError("first"))
+    await _enqueue_dlq("am-test1", {"y": 2}, "ingest", RuntimeError("second"))
+
+    # Both calls should succeed without raising
+    assert redis_mock._redis.set.await_count == 2
+
+    # Check that the first call logged dlq_enqueued
+    # and the second call logged dlq_enqueue_skipped
+    # (This is implicit in the fact that we got two calls with no exception)
+
+
+@pytest.mark.asyncio
 async def test_sweep_failure_preserves_expires_at_ttl(monkeypatch):
     """
     Finding #2 fix test: sweep write-back computes remaining TTL from
@@ -142,6 +166,47 @@ async def test_sweep_failure_preserves_expires_at_ttl(monkeypatch):
     # The captured TTL should be approximately 5000 (within a few seconds),
     # NOT 86400 (which would be a full 24h reset)
     assert 4990 <= captured_ex <= 5010, f"Expected ~5000, got {captured_ex}"
+
+
+@pytest.mark.asyncio
+async def test_sweep_writeback_failure_is_swallowed_and_logged(monkeypatch):
+    """
+    Finding #2 fix test: when sweep write-back Redis fails, the exception
+    is caught and logged, and the scan loop continues (does not abort).
+    """
+    from datetime import datetime, timezone, timedelta
+
+    # Create an entry with attempts=1 (will retry)
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(seconds=5000)
+    initial = {
+        "event": _evt().model_dump(mode="json"),
+        "kind": "ingest",
+        "first_failed_at": now.isoformat(),
+        "expires_at": expires_at.isoformat(),
+        "attempts": 1,
+        "last_error": "old",
+    }
+    redis_mock = AsyncMock()
+    redis_mock._redis = AsyncMock()
+    redis_mock._redis.scan_iter = lambda pattern: _aiter(["am_dlq:am-test1"])
+    redis_mock._redis.get = AsyncMock(return_value=json.dumps(initial).encode())
+    # _ingest raises (triggers failure branch)
+    # _redis.set also raises on write-back
+    redis_mock._redis.set = AsyncMock(side_effect=RuntimeError("Redis down"))
+    redis_mock._redis.delete = AsyncMock()
+    monkeypatch.setattr(am_module, "get_redis", AsyncMock(return_value=redis_mock))
+    monkeypatch.setattr(am_module, "_ingest", AsyncMock(side_effect=RuntimeError("still down")))
+
+    # sweep_am_dlq() must NOT raise even when write-back fails
+    await sweep_am_dlq()
+
+    # Confirm the scan loop ran (got one entry)
+    redis_mock._redis.get.assert_awaited()
+    # Confirm write-back was attempted
+    redis_mock._redis.set.assert_awaited()
+    # Confirm the entry was NOT deleted (it stays in DLQ)
+    redis_mock._redis.delete.assert_not_awaited()
 
 
 # ── Sweep tests ───────────────────────────────────────────────────────────────

@@ -380,6 +380,8 @@ async def _enqueue_dlq(external_id: str, payload: dict, kind: str, error: Except
 
     Stores expires_at on first creation (only when the key doesn't already exist)
     to enforce 24h TTL from creation, not from last retry.
+    Uses SET NX to prevent overwriting existing entries if AM retries the same
+    webhook (would reset attempts counter and TTL window).
     """
     redis = await get_redis()
     now = datetime.now(timezone.utc)
@@ -392,11 +394,20 @@ async def _enqueue_dlq(external_id: str, payload: dict, kind: str, error: Except
         "attempts":        0,
         "last_error":      str(error)[:500],
     }
-    await redis._redis.set(
+    result = await redis._redis.set(
         f"am_dlq:{external_id}",
         json.dumps(entry),
         ex=DLQ_TTL_SECONDS,
+        nx=True,
     )
+    if not result:
+        log.debug("am_dlq_enqueue_skipped key=am_dlq:%s reason=already_exists", external_id)
+        log.info(
+            "am_metric event=dlq_enqueue_skipped external_id=%s reason=already_exists",
+            external_id,
+        )
+        return
+
     log.info(
         "am_metric event=dlq_enqueued kind=%s external_id=%s",
         kind, external_id,
@@ -516,8 +527,14 @@ async def sweep_am_dlq() -> None:
                 # Legacy entry (pre-fix) — assume 24h from now as a bounded migration path
                 log.debug("am_legacy_dlq_entry key=%s missing_or_invalid_expires_at", key)
                 remaining_seconds = DLQ_TTL_SECONDS
-            await redis._redis.set(key, json.dumps(entry), ex=remaining_seconds)
-            log.warning(
-                "am_dlq_retry_failed key=%s attempts=%d error=%s",
-                key, entry["attempts"], exc,
-            )
+            try:
+                await redis._redis.set(key, json.dumps(entry), ex=remaining_seconds)
+                log.warning(
+                    "am_metric event=dlq_retry_failed key=%s attempts=%d error=%s",
+                    key, entry["attempts"], exc,
+                )
+            except Exception as write_exc:
+                log.error(
+                    "am_metric event=dlq_writeback_failed key=%s attempts=%d write_error=%s",
+                    key, entry["attempts"], write_exc,
+                )
