@@ -275,7 +275,7 @@ async def _resolve(external_id: str) -> dict:
         return {"resolved": False, "reason": "snow_disabled"}
 
     redis = await get_redis()
-    raw   = await redis._redis.get(f"snow_incident:{external_id}")
+    raw   = await redis.get(f"snow_incident:{external_id}")
     if not raw:
         log.info("am_metric event=resolve outcome=no_binding external_id=%s", external_id)
         return {"resolved": False, "reason": "no_binding"}
@@ -316,8 +316,10 @@ async def _resolve(external_id: str) -> dict:
         patch_resp.raise_for_status()
 
     # Clean up Redis bindings
-    await redis._redis.delete(f"snow_incident:{external_id}")
-    await redis._redis.delete(f"problem_id:{binding['incident_number']}")
+    await redis.delete(
+        f"snow_incident:{external_id}",
+        f"problem_id:{binding['incident_number']}",
+    )
 
     # SSE: pipeline_complete (PIPELINE_COMPLETE, not PIPELINE_RESOLVED)
     run_id = binding.get("run_id")
@@ -361,10 +363,8 @@ def _resolve_worknote(external_id: str) -> str:
 # Max retries: 5. Exhausted entries are left in place until TTL expiry so
 # operators can inspect them; they are logged at ERROR level.
 #
-# Adjustment #1 (private Redis API): uses redis._redis.{set,get,delete,scan_iter}
-# directly — consistent with PR2's _resolve() pattern. Public helpers
-# (.get/.set/.delete/.scan_iter) will be added to RedisClient in a follow-up
-# ticket and both _resolve() and this module will be updated together.
+# Uses RedisClient's public helpers (.get/.set/.delete/.scan_iter) — added
+# in the RedisClient helpers refactor to retire the previous ._redis.* access.
 
 DLQ_TTL_SECONDS = 86400   # 24 h
 DLQ_MAX_ATTEMPTS = 5
@@ -394,7 +394,7 @@ async def _enqueue_dlq(external_id: str, payload: dict, kind: str, error: Except
         "attempts":        0,
         "last_error":      str(error)[:500],
     }
-    result = await redis._redis.set(
+    result = await redis.set(
         f"am_dlq:{external_id}",
         json.dumps(entry),
         ex=DLQ_TTL_SECONDS,
@@ -492,8 +492,8 @@ async def sweep_am_dlq() -> None:
         ingest_fn = _main_ingest
 
     redis = await get_redis()
-    async for key in redis._redis.scan_iter("am_dlq:*"):
-        raw = await redis._redis.get(key)
+    async for key in redis.scan_iter("am_dlq:*"):
+        raw = await redis.get(key)
         if not raw:
             continue
         entry = json.loads(raw)
@@ -511,7 +511,7 @@ async def sweep_am_dlq() -> None:
                 await ingest_fn(OrchestratorEvent(**entry["event"]))
             else:
                 await _resolve(entry["event"]["external_id"])
-            await redis._redis.delete(key)
+            await redis.delete(key)
             log.info(
                 "am_metric event=dlq_swept outcome=success external_id=%s",
                 entry.get("event", {}).get("external_id", key),
@@ -528,7 +528,7 @@ async def sweep_am_dlq() -> None:
                 log.debug("am_legacy_dlq_entry key=%s missing_or_invalid_expires_at", key)
                 remaining_seconds = DLQ_TTL_SECONDS
             try:
-                await redis._redis.set(key, json.dumps(entry), ex=remaining_seconds)
+                await redis.set(key, json.dumps(entry), ex=remaining_seconds)
                 log.warning(
                     "am_metric event=dlq_retry_failed key=%s attempts=%d error=%s",
                     key, entry["attempts"], exc,
