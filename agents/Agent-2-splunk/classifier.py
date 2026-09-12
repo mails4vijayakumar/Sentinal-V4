@@ -17,6 +17,7 @@ from typing import Any, Dict, List
 import httpx
 
 import rules
+from shared.models import RuleMatch
 
 log = logging.getLogger(__name__)
 
@@ -109,3 +110,35 @@ async def run_splunk_async(client: httpx.AsyncClient, spl: str) -> List[Dict[str
     )
     fetch.raise_for_status()
     return fetch.json().get("results", []) or []
+
+
+# ── Phase 4: score ───────────────────────────────────────────────────────────
+
+_RULE_SETS = (
+    ("app",   rules.APP_RULES),
+    ("infra", rules.INFRA_RULES),
+    ("db",    rules.DB_RULES),
+)
+
+
+def _row_text(row: Dict[str, Any]) -> str:
+    raw = row.get("_raw")
+    return raw if isinstance(raw, str) else str(row)
+
+
+def score(results: List[Dict[str, Any]]) -> List[RuleMatch]:
+    """Apply every rule to every row. Return one RuleMatch per rule that hit ≥ 1."""
+    # (rule_id, rule_set, weight) → [count, first_sample_line]
+    hits: Dict[str, List[Any]] = {}
+    for row in results:
+        text = _row_text(row)
+        for rule_set_name, rule_set in _RULE_SETS:
+            for rule_id, pattern, weight in rule_set:
+                if pattern.search(text):
+                    entry = hits.setdefault(rule_id, [0, text[:200], rule_set_name, weight])
+                    entry[0] += 1
+    return [
+        RuleMatch(rule_id=rid, rule_set=rs_name, weight=w,
+                  match_count=count, sample_line=sample)
+        for rid, (count, sample, rs_name, w) in hits.items()
+    ]
