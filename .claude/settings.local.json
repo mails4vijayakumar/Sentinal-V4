@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest tests/test_refactor_parity.py -v -m \"not integration\")",
+      "Bash(python3 -c ' *)",
+      "Bash(git add *)",
+      "Bash(python -c \"from agents.Agent_1_dynatrace.main import app; print\\('Import successful'\\)\")",
+      "Bash(python -m pytest tests/test_agent2_models.py -v)"
+    ]
+  }
+}
