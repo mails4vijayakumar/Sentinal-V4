@@ -186,3 +186,139 @@ def precompute_routing(category: str) -> Dict[str, str]:
     """
     row = rules.CATEGORY_ROUTING.get(category)
     return dict(row) if row else {}
+
+
+# ── Module-level config (read at import) ─────────────────────────────────────
+
+SPLUNK_BASE:  str = os.getenv("SPLUNK_BASE_URL", "").rstrip("/")
+SPLUNK_TOKEN: str = os.getenv("SPLUNK_TOKEN", "")
+SPLUNK_INDEX: str = os.getenv("SPLUNK_INDEX", "main")
+
+SPLUNK_TIER1_SHORTCIRCUIT_MIN: int = int(os.getenv("SPLUNK_TIER1_SHORTCIRCUIT_MIN", "20"))
+
+
+# ── Top-level entry point ────────────────────────────────────────────────────
+
+from shared.models import SplunkEnrichment  # placed here to keep the module top short
+
+
+async def classify(event: Dict[str, Any], severity: str) -> SplunkEnrichment:
+    """Run the six phases; return a fully populated SplunkEnrichment."""
+    dt_hypothesis = preclassify(event)
+
+    if not SPLUNK_BASE:
+        return _degraded(dt_hypothesis, severity, reason="Splunk not configured")
+
+    host    = event.get("host") or ""
+    service = event.get("service") or ""
+    queries = build_tiered_queries(host, service, severity, SPLUNK_INDEX)
+
+    executed: List[str] = []
+    all_rows: List[Dict[str, Any]] = []
+    tier_used: int | None = None
+
+    try:
+        async with httpx.AsyncClient(
+            base_url=SPLUNK_BASE,
+            headers={"Authorization": f"Bearer {SPLUNK_TOKEN}"},
+            timeout=httpx.Timeout(connect=10.0, read=25.0, write=10.0, pool=5.0),
+            verify=True,
+        ) as client:
+            for i, spl in enumerate(queries, start=1):
+                executed.append(spl)
+                rows = await run_splunk_async(client, spl)
+                all_rows = rows
+                tier_used = i
+                if i == 1 and len(rows) >= SPLUNK_TIER1_SHORTCIRCUIT_MIN:
+                    break
+                if i < len(queries):
+                    continue
+                break
+    except Exception as exc:
+        log.warning("agent2_splunk_failed reason=%s", exc)
+        return _degraded(dt_hypothesis, severity, reason="Splunk query failed", spl_queries=executed)
+
+    matches = score(all_rows)
+    final_category, splunk_category, confidence, source = resolve_conflict(dt_hypothesis, matches)
+    routing = precompute_routing(final_category)
+
+    error_count = sum(1 for r in all_rows if "ERROR" in _row_text(r).upper())
+    warn_count  = sum(1 for r in all_rows if "WARN"  in _row_text(r).upper())
+
+    summary = (f"{len(matches)} rule match(es) across "
+               f"{len({m.rule_set for m in matches})} rule set(s). "
+               f"Source={source}, confidence={confidence:.1f}%.")
+
+    return SplunkEnrichment(
+        log_lines_scanned=len(all_rows),
+        error_count=error_count,
+        warn_count=warn_count,
+        top_errors=[m.rule_id for m in matches[:5]],
+        time_range=f"last {rules.WINDOW_MIN.get(severity, 30)}min",
+        index=SPLUNK_INDEX,
+        spl_query=executed[-1] if executed else None,
+        spl_queries=executed,
+        tier_used=tier_used,
+        rule_matches=matches,
+        dt_hypothesis=dt_hypothesis,
+        splunk_category=splunk_category,
+        confidence=confidence,
+        hypothesis_source=source,
+        error_category=final_category,
+        classification=final_category,          # backward compat
+        assigned_team=routing.get("team"),
+        assigned_queue=routing.get("queue"),
+        snow_category=routing.get("snow_category"),
+        snow_subcategory=routing.get("snow_subcategory"),
+        llm_summary=summary,
+    )
+
+
+def _degraded(dt_hypothesis: str, severity: str, *, reason: str,
+              spl_queries: List[str] | None = None) -> SplunkEnrichment:
+    routing = precompute_routing(dt_hypothesis)
+    return SplunkEnrichment(
+        log_lines_scanned=0,
+        time_range=f"last {rules.WINDOW_MIN.get(severity, 30)}min",
+        index=SPLUNK_INDEX,
+        spl_queries=spl_queries or [],
+        dt_hypothesis=dt_hypothesis,
+        splunk_category=None,
+        confidence=0.0,
+        hypothesis_source="dt",
+        error_category=dt_hypothesis,
+        classification=dt_hypothesis,
+        assigned_team=routing.get("team"),
+        assigned_queue=routing.get("queue"),
+        snow_category=routing.get("snow_category"),
+        snow_subcategory=routing.get("snow_subcategory"),
+        llm_summary=reason,
+    )
+
+
+# ── Flow B body renderer ─────────────────────────────────────────────────────
+
+def render_evidence_body(enrichment: SplunkEnrichment) -> str:
+    """Compose the body of the Flow B SPLUNK EVIDENCE work note (header added elsewhere)."""
+    if not enrichment.rule_matches:
+        window = enrichment.time_range or "the search window"
+        return (f"No matching log evidence in {window} — "
+                f"using DT hypothesis: {enrichment.error_category}")
+
+    lines: List[str] = []
+    lines.append(
+        f"Category (Splunk-scored): {enrichment.splunk_category or enrichment.error_category}  "
+        f"(confidence {enrichment.confidence:.0f}%, "
+        f"DT hypothesis was: {enrichment.dt_hypothesis})"
+    )
+    lines.append(f"Tier: {enrichment.tier_used}")
+    lines.append(f"Log lines scanned: {enrichment.log_lines_scanned}")
+    lines.append("Top matches:")
+    for m in sorted(enrichment.rule_matches, key=lambda x: x.match_count, reverse=True)[:5]:
+        rule_score = m.weight * math.log10(1 + m.match_count)
+        lines.append(f"  • {m.rule_id:<22} (score {rule_score:.1f}, {m.match_count} matches)")
+        lines.append(f"      sample: \"{m.sample_line}\"")
+    spl = enrichment.spl_query or (enrichment.spl_queries[-1] if enrichment.spl_queries else None)
+    if spl:
+        lines.append(f"SPL: {spl}")
+    return "\n".join(lines)
