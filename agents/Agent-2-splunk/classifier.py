@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 import os
-from typing import Any, Dict, List
+from collections import defaultdict
+from typing import Any, Dict, List, Tuple
 
 import httpx
 
@@ -142,3 +144,34 @@ def score(results: List[Dict[str, Any]]) -> List[RuleMatch]:
                   match_count=count, sample_line=sample)
         for rid, (count, sample, rs_name, w) in hits.items()
     ]
+
+
+# ── Phase 5: resolve_conflict ────────────────────────────────────────────────
+
+CONFLICT_RESOLUTION_THRESHOLD: float = float(os.getenv("CONFLICT_RESOLUTION_THRESHOLD", "65.0"))
+
+
+def resolve_conflict(
+    dt_hypothesis: str,
+    rule_matches: List[RuleMatch],
+) -> Tuple[str, str | None, float, str]:
+    """Compute per-rule-set scores and pick the winner.
+
+    Returns (final_category, splunk_category, confidence, hypothesis_source).
+    splunk_category is None when there are no matches at all.
+    """
+    if not rule_matches:
+        return dt_hypothesis, None, 0.0, "dt"
+
+    scores: Dict[str, float] = defaultdict(float)
+    for m in rule_matches:
+        scores[m.rule_set] += m.weight * math.log10(1 + m.match_count)
+
+    ranked = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
+    splunk_category, winning_score = ranked[0]
+    runner_up_score = ranked[1][1] if len(ranked) > 1 else 0.0
+    confidence = 100.0 * winning_score / (winning_score + runner_up_score + 1e-6)
+
+    if confidence >= CONFLICT_RESOLUTION_THRESHOLD:
+        return splunk_category, splunk_category, confidence, "splunk"
+    return dt_hypothesis, splunk_category, confidence, "dt"
