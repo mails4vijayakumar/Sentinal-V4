@@ -175,3 +175,14 @@ def resolve_conflict(
     if confidence >= CONFLICT_RESOLUTION_THRESHOLD:
         return splunk_category, splunk_category, confidence, "splunk"
     return dt_hypothesis, splunk_category, confidence, "dt"
+
+
+# ── Phase 6: precompute_routing ──────────────────────────────────────────────
+
+def precompute_routing(category: str) -> Dict[str, str]:
+    """Map resolved category → {team, queue, snow_category, snow_subcategory}.
+
+    Unknown categories return an empty dict (Agent 3 handles missing fields).
+    """
+    row = rules.CATEGORY_ROUTING.get(category)
+    return dict(row) if row else {}
