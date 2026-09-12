@@ -9,8 +9,12 @@ Spec: docs/superpowers/specs/2026-07-01-agent-2-spec-closure-design.md
 """
 from __future__ import annotations
 
+import asyncio
 import logging
+import os
 from typing import Any, Dict, List
+
+import httpx
 
 import rules
 
@@ -66,3 +70,42 @@ def build_tiered_queries(host: str, service: str, severity: str, index: str) -> 
         if t not in seen:
             seen.append(t)
     return seen
+
+
+# ── Phase 3: async Splunk submit / poll / fetch ──────────────────────────────
+
+SPLUNK_JOB_POLL_INTERVAL_SECONDS: float = float(os.getenv("SPLUNK_JOB_POLL_INTERVAL_SECONDS", "2"))
+SPLUNK_JOB_MAX_POLLS: int              = int(os.getenv("SPLUNK_JOB_MAX_POLLS", "10"))
+
+
+class SplunkPollTimeout(Exception):
+    """Raised when the poll loop exhausts without dispatchState=DONE."""
+
+
+async def run_splunk_async(client: httpx.AsyncClient, spl: str) -> List[Dict[str, Any]]:
+    """Submit a Splunk search job, poll to completion, return results."""
+    submit = await client.post(
+        "/services/search/jobs",
+        data={"search": spl, "output_mode": "json", "exec_mode": "normal"},
+    )
+    submit.raise_for_status()
+    sid = submit.json()["sid"]
+
+    for _ in range(SPLUNK_JOB_MAX_POLLS):
+        await asyncio.sleep(SPLUNK_JOB_POLL_INTERVAL_SECONDS)
+        poll = await client.get(f"/services/search/jobs/{sid}",
+                                params={"output_mode": "json"})
+        poll.raise_for_status()
+        entries = poll.json().get("entry", [])
+        state = entries[0].get("content", {}).get("dispatchState") if entries else None
+        if state == "DONE":
+            break
+    else:
+        raise SplunkPollTimeout(f"sid={sid} never reached DONE after {SPLUNK_JOB_MAX_POLLS} polls")
+
+    fetch = await client.get(
+        f"/services/search/jobs/{sid}/results",
+        params={"output_mode": "json", "count": SPLUNK_MAX_RESULTS},
+    )
+    fetch.raise_for_status()
+    return fetch.json().get("results", []) or []
