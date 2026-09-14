@@ -1,0 +1,740 @@
+{
+  "exam_metadata": {
+    "title": "Claude Certified Architect (CCA) Practice Exam — Part 2",
+    "total_questions": 60,
+    "format": "Multiple Choice (Single Select)",
+    "options_per_question": 4,
+    "source_file": "Part_-_2.docx",
+    "extraction_date": "2026-06-18",
+    "questions_fully_extracted": 39,
+    "questions_pending": 21,
+    "scenario_domains": [
+      "Claude Code for Continuous Integration",
+      "Code Generation with Claude Code",
+      "Customer Support Resolution Agent",
+      "Structured Data Extraction"
+    ]
+  },
+  "questions": [
+    {
+      "question_number": 1,
+      "scenario": "Claude Code for Continuous Integration",
+      "scenario_context": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives.",
+      "question": "Your pull request review workflow exposes two structured tools: extract_pr_metadata and generate_review_findings. Recent CI logs show that on documentation-heavy pull requests, Claude sometimes calls generate_review_findings first, so findings lack required repository area, file ownership, and review policy metadata. The metadata must be captured before later review and enrichment steps run. What change best improves reliability?",
+      "options": {
+        "A": "Keep tool_choice as auto and strengthen the prompt to always complete metadata extraction before generating findings.",
+        "B": "Configure tool_choice to force extract_pr_metadata on the first request, then run review findings in a follow-up turn.",
+        "C": "Set tool_choice to any and place extract_pr_metadata first, allowing Claude to choose the best structured tool.",
+        "D": "Gate the loop by parsing assistant text for 'metadata complete' before accepting generated review findings."
+      }
+    },
+    {
+      "question_number": 2,
+      "scenario": "Customer Support Resolution Agent",
+      "scenario_context": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate.",
+      "question": "In a customer support resolution agent using Claude Agent SDK and MCP-backed support tooling, you add an MCP server with policy_search and case_history_search tools that use backend ranking, policy metadata, and customer-safe summaries. In evaluation runs, Claude frequently searches raw policy markdown files instead and sometimes returns outdated refund rules. The MCP tools are connected and return better results when explicitly called, but they are rarely chosen spontaneously. What is the most effective first change?",
+      "options": {
+        "A": "Merge the MCP policy tools into one broad support_lookup tool that searches customers, orders, refunds, and policy files together.",
+        "B": "Disable generic file-search tools for all sessions so the agent cannot inspect policy documents without calling the MCP server.",
+        "C": "Add a system prompt rule that says MCP tools are always preferred whenever a customer request mentions returns or billing.",
+        "D": "Rewrite the MCP tool descriptions to detail support-specific capabilities, accepted identifiers, returned fields, and when to use them instead of generic search."
+      }
+    },
+    {
+      "question_number": 3,
+      "scenario": "Customer Support Resolution Agent",
+      "scenario_context": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate.",
+      "question": "You split the support system into a coordinator plus specialized subagents for intake, order investigation, and refund-policy evaluation. Production traces show the refund-policy subagent needs order delivery dates and return-window status in most refund cases, but only the coordinator can currently call lookup_order, adding multiple round trips. The lookup_order tool is read-only, while process_refund changes backend state and escalate_to_human creates a handoff. What change best balances latency reduction with reliable control of sensitive actions?",
+      "options": {
+        "A": "Keep all tools coordinator-only and have subagents return natural-language requests whenever they need order or customer details.",
+        "B": "Grant the refund-policy subagent scoped access to lookup_order, while keeping process_refund and escalation routed through the coordinator.",
+        "C": "Give every support subagent access to all four MCP tools so each can resolve cases without coordinator round trips.",
+        "D": "Create a keyword router that sends any message mentioning refunds directly to process_refund before subagent review."
+      }
+    },
+    {
+      "question_number": 4,
+      "scenario": "Claude Code for Continuous Integration",
+      "scenario_context": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives.",
+      "question": "After rollout, automated pull request reviews generate many comments about naming preferences, import ordering, and subjective refactoring suggestions. Developers now skim past the bot's feedback, and important correctness issues are sometimes overlooked in the noise. What should you change first?",
+      "options": {
+        "A": "Instruct Claude to report only findings it rates above 8/10 confidence, while keeping the same broad review scope.",
+        "B": "Rewrite the review prompt to report demonstrable bugs, security risks, and test gaps, while skipping stylistic preferences without documented impact.",
+        "C": "Ask Claude to include every possible improvement, then rely on developers to triage severity labels during pull request review.",
+        "D": "Limit each review to five comments sorted by severity, leaving the existing broad issue categories otherwise unchanged."
+      }
+    },
+    {
+      "question_number": 5,
+      "scenario": "Customer Support Resolution Agent",
+      "scenario_context": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate.",
+      "question": "During refund testing, four backend failure modes are collapsed into the same MCP tool result: payment-service timeout, malformed refund_amount from the agent, an order outside the return window, and the tool account lacking refund permissions. Production simulations show the agent gives the same apology for all failures, retries cases that cannot succeed, and hides access problems as policy denials. What change would most improve the tool contract?",
+      "options": {
+        "A": "Configure the agent to parse backend error strings for keywords, choosing retries, clarifications, or escalation from matched phrases.",
+        "B": "Treat all refund failures as non-retryable business denials, then have the agent explain return policy to customers.",
+        "C": "Return distinct structured categories for transient, validation, business, and permission failures, with retryability flags and customer-safe recovery guidance.",
+        "D": "Retry every failed refund call three times before escalating, regardless of whether the backend reported policy or permission issues."
+      }
+    },
+    {
+      "question_number": 6,
+      "scenario": "Structured Data Extraction",
+      "scenario_context": "You are building a structured data extraction system using Claude. The system extracts information from unstructured documents, validates output using JSON schemas, and maintains high accuracy. It must handle edge cases gracefully and integrate with downstream systems.",
+      "question": "Your extraction schema classifies vendor contract clauses using a required enum: termination, indemnity, liability, confidentiality, payment. In validation logs, unusual clauses are being forced into the nearest allowed category, while genuinely ambiguous clauses are returned with confident but inconsistent labels. Downstream analytics need stable categories without losing information from unexpected clause types. What schema adjustment best handles these edge cases?",
+      "options": {
+        "A": "Make category a required unrestricted string so Claude can invent precise labels for every unexpected clause type.",
+        "B": "Keep the closed enum and instruct Claude to choose the closest category whenever the source is unclear.",
+        "C": "Remove the category field and rely on downstream systems to infer classifications from extracted clause text.",
+        "D": "Add enum values for ambiguous cases and a fallback category paired with a required free-text detail field."
+      }
+    },
+    {
+      "question_number": 7,
+      "scenario": "Customer Support Resolution Agent",
+      "scenario_context": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate.",
+      "question": "During intake testing, when a customer provides enough identifying details but asks, \"Can you just check this?\", the agent sometimes replies with generic guidance instead of using any backend tool. You do not know in advance whether get_customer, lookup_order, or escalate_to_human is appropriate, but every production response must be grounded in at least one backend action. What configuration best addresses this behavior?",
+      "options": {
+        "A": "Retry whenever assistant text sounds generic, using phrase matching to continue the loop until a tool appears.",
+        "B": "Configure tool_choice to any so Claude must call one available tool while retaining model-driven selection among applicable tools.",
+        "C": "Force get_customer as the required tool for all turns, then let Claude decide whether additional tools are needed.",
+        "D": "Keep tool_choice on auto and strengthen system prompt instructions requiring backend lookup before every customer-facing response."
+      }
+    },
+    {
+      "question_number": 8,
+      "scenario": "Structured Data Extraction",
+      "scenario_context": "You are building a structured data extraction system using Claude. The system extracts information from unstructured documents, validates output using JSON schemas, and maintains high accuracy. It must handle edge cases gracefully and integrate with downstream systems.",
+      "question": "A pilot processes 30 contracts per run. Accuracy is high on early documents but declines later: clauses copied from earlier contracts appear in later extractions, and page references from middle documents are dropped. Trace logs show raw outputs from OCR, table parsing, and validation tools dominate the request history, including coordinates, styling data, alternate OCR hypotheses, debug IDs, and validator traces. Downstream extraction only uses clause text, page number, document ID, confidence, and validation status. The operations team also needs original tool responses available for traceability. What change best addresses the reliability problem?",
+      "options": {
+        "A": "Keep all raw tool outputs in conversation history so Claude can independently determine which details remain important.",
+        "B": "Add a preprocessing layer that stores full tool outputs externally and appends only schema-relevant fields and provenance to conversation history.",
+        "C": "Increase max_tokens and reduce each request to fewer documents while leaving the tool result payloads unchanged.",
+        "D": "Replace accumulated tool results with brief prose summaries after every fixed batch of five processed documents."
+      }
+    },
+    {
+      "question_number": 9,
+      "scenario": "Code Generation with Claude Code",
+      "scenario_context": "You are using Claude Code to accelerate software development. Your team uses it for code generation, refactoring, debugging, and documentation. You need to integrate it into your development workflow with custom slash commands, CLAUDE.md configurations, and understand when to use plan mode vs direct execution.",
+      "question": "A CI review job already runs non-interactively and completes, but the script that posts inline pull request comments frequently fails because Claude's findings vary between markdown bullets, paragraphs, and code fences. Sometimes severity labels are missing or line ranges are formatted differently, so valid findings are dropped or posted to the wrong lines. What change would best make the review results reliable for automated consumption?",
+      "options": {
+        "A": "Keep markdown output but add stricter prompt wording and regex patterns for severity, filename, and line extraction.",
+        "B": "Post Claude's entire text response as one pull request comment and ask developers to review manually.",
+        "C": "Use the -p flag alone and have the CI script split Claude's response into sections by heading.",
+        "D": "Run Claude Code with --output-format json and --json-schema defining required fields for each pull request finding."
+      }
+    },
+    {
+      "question_number": 10,
+      "scenario": "Claude Code for Continuous Integration",
+      "scenario_context": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives.",
+      "question": "Your CI workflow lets Claude Code generate fixes for failing checks, then immediately review the resulting pull request in the same continuing conversation. Audits show the review often overlooks defects tied to assumptions made during implementation, such as trusting a helper API it introduced without validating edge cases. The review prompt already has explicit severity criteria and a consistent finding format. What change would most improve defect detection?",
+      "options": {
+        "A": "Ask the generation session to explain its implementation rationale before reviewing the pull request for defects.",
+        "B": "Run the review as a separate Claude Code invocation using only the diff, repository context, and review criteria.",
+        "C": "Add stricter instructions telling the same session to challenge assumptions and search aggressively for mistakes.",
+        "D": "Run multiple reviews in the original session and require the same finding to appear twice before reporting."
+      }
+    },
+    {
+      "question_number": 11,
+      "scenario": "Customer Support Resolution Agent",
+      "scenario_context": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate.",
+      "question": "In the repository for this support agent, a regression appears only in test fixture files whose filenames end with .policy-case.json. These fixtures are scattered across multiple service packages, and you want Claude Code to identify the affected files before inspecting their contents. Which approach is most appropriate?",
+      "options": {
+        "A": "Use Glob with **/*.policy-case.json, review the matched paths, then Read only the relevant fixture files.",
+        "B": "Read all package directories recursively, then ask Claude to infer which filenames match the fixture naming convention.",
+        "C": "Use Grep for policy-case across repository contents, then Read every file returned by the content search.",
+        "D": "Use Bash to run recursive file listing commands, then paste the complete output into the conversation for filtering."
+      }
+    },
+    {
+      "question_number": 12,
+      "scenario": "Customer Support Resolution Agent",
+      "scenario_context": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate.",
+      "question": "Production logs show that when customers describe several related problems in one message, the agent often gives a detailed answer for the first issue, misses later issues, and sometimes recommends a refund without reconciling other charges on the same account. The workflow is predictable: each order or charge must be assessed, then the overall account resolution must be checked before the customer receives a response. What design should you use?",
+      "options": {
+        "A": "Ask one agent to process the entire case in a single prompt with stricter instructions to be exhaustive.",
+        "B": "Use a prompt chain that reviews each order or charge independently, then runs a final account-level consistency pass.",
+        "C": "Route the case through every available MCP tool in a fixed sequence before allowing any customer response.",
+        "D": "Set a maximum of three agent iterations, escalating cases that still contain unresolved issues after the cap."
+      }
+    },
+    {
+      "question_number": 13,
+      "scenario": "Customer Support Resolution Agent",
+      "scenario_context": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate.",
+      "question": "During a multi-hour investigation of the refund workflow, the agent correctly identifies several important files, policy branches, and edge cases. Later in the same session, it starts contradicting earlier findings, references generic support-system patterns, and asks to rediscover classes it already inspected. What change would best improve reliability across the rest of the investigation?",
+      "options": {
+        "A": "Restart the session whenever answers become inconsistent and require the agent to scan the entire repository again.",
+        "B": "Use /compact after every major tool call so the entire conversation remains summarized before additional investigation continues.",
+        "C": "Have agents maintain concise scratchpad files with key findings, file paths, and decisions, then reference them in later prompts.",
+        "D": "Append every raw tool result to each follow-up request so the agent can reconsider all discovered evidence each turn."
+      }
+    },
+    {
+      "question_number": 14,
+      "scenario": "Customer Support Resolution Agent",
+      "scenario_context": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate.",
+      "question": "Pilot logs show that process_refund returns the same short failure text for processor timeouts, expired refund windows, missing staff permissions, and malformed amounts. The agent responds inconsistently: it retries policy denials, escalates simple input mistakes, and gives customers vague explanations when permission is missing. What change would most directly improve the agent's recovery decisions?",
+      "options": {
+        "A": "Replace process_refund with separate tools for timeouts, policy denials, permission issues, and invalid input cases.",
+        "B": "Add prompt instructions telling the agent to infer failure causes from customer wording and conversation sentiment.",
+        "C": "Configure the agent to retry every failed tool call three times before escalating unresolved requests to a human.",
+        "D": "Update each MCP tool to return categorized failures with retryability and customer-safe guidance tailored to the specific backend condition."
+      }
+    },
+    {
+      "question_number": 15,
+      "scenario": "Customer Support Resolution Agent",
+      "scenario_context": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate.",
+      "question": "Production traces show that when customers provide photos and an order number, the agent sometimes calls process_refund immediately after get_customer succeeds, before lookup_order confirms item status, purchase date, and refundable amount. Several refunds were issued for final-sale items that backend policy would have rejected. What change would most effectively prevent this failure while preserving autonomous resolution for eligible cases?",
+      "options": {
+        "A": "Strengthen the system prompt to state that process_refund may run only after checking customer identity and order eligibility.",
+        "B": "Add a tool-call gate that rejects process_refund until get_customer and lookup_order return matching, refund-eligible records.",
+        "C": "Require the agent to search its prior assistant text for 'eligible refund' before allowing process_refund calls.",
+        "D": "Escalate every refund request involving photos or final-sale keywords to humans before any backend tools run."
+      }
+    },
+    {
+      "question_number": 16,
+      "scenario": "Claude Code for Continuous Integration",
+      "scenario_context": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives.",
+      "question": "Your review job emits structured findings that always pass JSON parsing and required-field checks. However, production logs show some findings reference line numbers outside the pull request diff, classify test-only issues as production blockers, or include remediation text that contradicts the reported issue. What change would most effectively improve reliability before posting comments to pull requests?",
+      "options": {
+        "A": "Lower temperature and instruct Claude to double-check every file path, line number, severity, and remediation before returning results.",
+        "B": "Keep tool-based structured output, then add semantic validation against diff metadata, severity rules, and finding consistency before publishing comments.",
+        "C": "Replace tool use with markdown output and parse the natural language explanation for contradictions before posting review comments.",
+        "D": "Make every finding field required in the JSON schema so Claude cannot omit uncertain values during automated review generation."
+      }
+    },
+    {
+      "question_number": 17,
+      "scenario": "Claude Code for Continuous Integration",
+      "scenario_context": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives.",
+      "question": "A CI job generates test recommendations on every pull request. Developers report that many comments propose tests already present, such as empty-cart checkout and expired-token login cases. The job currently sends Claude only the PR diff and modified source files, then posts every suggested test as a comment. What change would best reduce these duplicate recommendations while preserving useful gap detection?",
+      "options": {
+        "A": "Add a prompt rule saying not to repeat existing coverage, while continuing to provide only implementation diffs.",
+        "B": "Pass the relevant current test files into the review context and ask Claude to target only uncovered behaviors.",
+        "C": "Have Claude generate a full replacement test suite for the modified module on every pull request run.",
+        "D": "Raise the severity threshold for generated test suggestions so duplicate scenarios are filtered from pull request comments."
+      }
+    },
+    {
+      "question_number": 18,
+      "scenario": "Code Generation with Claude Code",
+      "scenario_context": "You are using Claude Code to accelerate software development. Your team uses it for code generation, refactoring, debugging, and documentation. You need to integrate it into your development workflow with custom slash commands, CLAUDE.md configurations, and understand when to use plan mode vs direct execution.",
+      "question": "Your frontend repo has component files under src/ui, packages/admin/widgets, and legacy/screens. The same accessibility and Storybook conventions were copied into several local instruction files, but updates drift and Claude misses conventions when editing new component folders. What should you change?",
+      "options": {
+        "A": "Create a repository rule file with YAML path globs matching component and story files, then remove duplicated directory instructions.",
+        "B": "Add a CLAUDE.md file to every existing component directory and require maintainers to copy updates manually.",
+        "C": "Create a custom slash command for component generation that includes conventions, and ask developers to remember using it.",
+        "D": "Put all component conventions in the root CLAUDE.md and tell Claude to apply only relevant sections."
+      }
+    },
+    {
+      "question_number": 19,
+      "scenario": "Code Generation with Claude Code",
+      "scenario_context": "You are using Claude Code to accelerate software development. Your team uses it for code generation, refactoring, debugging, and documentation. You need to integrate it into your development workflow with custom slash commands, CLAUDE.md configurations, and understand when to use plan mode vs direct execution.",
+      "question": "Your repository has separate frontend, backend, and data packages. Each package has a maintainer-owned standards document that changes monthly, and Claude Code currently receives a copied, 900-line root instruction file covering every package. Developers report inconsistent behavior because irrelevant conventions appear in context, and standards drift when copied sections are not updated. What is the most maintainable configuration change?",
+      "options": {
+        "A": "Keep all standards in the root CLAUDE.md, adding stronger headings that tell Claude to ignore unrelated package sections.",
+        "B": "Use small package-level CLAUDE.md files that reference the relevant standards documents with @import, keeping shared root guidance minimal.",
+        "C": "Duplicate the current standards into every package subdirectory CLAUDE.md, and assign maintainers to update copied sections manually.",
+        "D": "Move package standards into each developer's ~/.claude/CLAUDE.md so individual users can customize package guidance locally."
+      }
+    },
+    {
+      "question_number": 20,
+      "scenario": "Customer Support Resolution Agent",
+      "scenario_context": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate.",
+      "question": "After the coordinator verifies a customer and retrieves two recent orders, it invokes a refund-policy subagent to assess eligibility. In production, the subagent often ignores the verified customer ID and latest order status, then asks for details already present in the coordinator's transcript. Logs show the Task prompt only says, \"assess refund eligibility for this customer.\" What change best addresses this reliability issue?",
+      "options": {
+        "A": "Have the subagent call get_customer and lookup_order again whenever details are missing from its prompt.",
+        "B": "Keep the facts in the coordinator transcript and instruct subagents to review the parent conversation before deciding.",
+        "C": "Rely on a prior refund-policy subagent invocation to remember customer context for subsequent eligibility checks.",
+        "D": "Populate each Task prompt with the verified customer facts, relevant order records, prior findings, and needed decision criteria."
+      }
+    },
+    {
+      "question_number": 21,
+      "scenario": "Customer Support Resolution Agent",
+      "scenario_context": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate.",
+      "question": "During testing, a customer says they were charged twice and want a refund. The first model response contains a brief customer-facing sentence plus a request to call get_customer, but your loop displays the sentence and exits, so no tool runs. After a later patch, some conversations continue calling tools even after Claude has produced a complete customer response. Which implementation change best addresses both failure modes?",
+      "options": {
+        "A": "Predefine a fixed get_customer, lookup_order, process_refund sequence, stopping whenever a backend tool returns a successful response.",
+        "B": "Stop the loop when the assistant text includes final answer language, then skip any remaining tool_use blocks.",
+        "C": "Run at most three iterations for every request, returning the latest assistant text once the cap is reached.",
+        "D": "Drive the loop from stop_reason, execute requested tools when it is tool_use, and return only when it is end_turn."
+      }
+    },
+    {
+      "question_number": 22,
+      "scenario": "Customer Support Resolution Agent",
+      "scenario_context": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate.",
+      "question": "You added AgentDefinition entries for billing-investigator and returns-investigator specialists, but production traces show the coordinator never starts them. The coordinator is configured with allowedTools containing only get_customer, lookup_order, process_refund, and escalate_to_human. What change best enables the intended delegation without unnecessarily broadening each specialist's permissions?",
+      "options": {
+        "A": "Run separate support-agent sessions for each specialty and paste their final summaries into the coordinator after completion.",
+        "B": "Grant every specialist all backend MCP tools so they can self-select capabilities without coordinator-mediated spawning.",
+        "C": "Add Task to coordinator allowedTools and invoke specialists through it, while keeping backend MCP tools scoped to appropriate agents.",
+        "D": "Instruct the coordinator to mention specialist names in prompts and treat their natural-language replies as delegated investigations."
+      }
+    },
+    {
+      "question_number": 23,
+      "scenario": "Structured Data Extraction",
+      "scenario_context": "You are building a structured data extraction system using Claude. The system extracts information from unstructured documents, validates output using JSON schemas, and maintains high accuracy. It must handle edge cases gracefully and integrate with downstream systems.",
+      "question": "During consolidation of extracted obligations from 60 supplier contracts, the final dataset correctly groups duplicate obligations across documents. However, auditors cannot determine which contract clauses support each normalized obligation, and reviewers must reopen every source file to verify disputed entries. What change would best improve reliability without preventing consolidation?",
+      "options": {
+        "A": "Store source document names at the batch level only, then rely on reviewers to infer relevant clauses when needed.",
+        "B": "Keep only the highest-confidence extraction for each obligation and discard lower-confidence duplicates during the consolidation step.",
+        "C": "Concatenate all document summaries before consolidation and ask Claude to regenerate citations for the final normalized obligations.",
+        "D": "Require each extracted obligation to carry source identifiers and excerpts, then merge duplicates while retaining every supporting reference."
+      }
+    },
+    {
+      "question_number": 24,
+      "scenario": "Customer Support Resolution Agent",
+      "scenario_context": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate.",
+      "question": "After verified customer, order, and policy facts are already collected for a difficult billing dispute, two plausible resolution paths remain. In previous tests, exploring both paths in one conversation caused later analysis to inherit assumptions from earlier analysis, while starting from scratch created inconsistent fact bases and extra backend calls. What is the best way to compare the two paths?",
+      "options": {
+        "A": "Resume the same named session twice, ask Claude to ignore the other path, then merge both final answers.",
+        "B": "Use fork_session from the verified case baseline, explore each resolution path independently, then compare branch summaries before deciding.",
+        "C": "Explore both paths in one conversation, separating them with headings and stopping after three turns each.",
+        "D": "Start two fresh sessions, rerun all customer and order lookups separately, then compare their independent recommendations."
+      }
+    },
+    {
+      "question_number": 25,
+      "scenario": "Code Generation with Claude Code",
+      "scenario_context": "You are using Claude Code to accelerate software development. Your team uses it for code generation, refactoring, debugging, and documentation. You need to integrate it into your development workflow with custom slash commands, CLAUDE.md configurations, and understand when to use plan mode vs direct execution.",
+      "question": "Your nightly CI job asks Claude Code to propose tests for changed modules. Suggestions are consistently low value: duplicating brittle snapshots, mocking helpers your repository already provides, and ignoring team rules that prioritize behavior tests over implementation details. Developers run the job from ephemeral runners, so ad hoc local preferences are not present. What change would most effectively improve the quality and consistency of generated test suggestions?",
+      "options": {
+        "A": "Store preferred testing style in ~/.claude/CLAUDE.md on the maintainer's laptop and copy outputs into pull requests.",
+        "B": "Add a prompt line asking Claude to be conservative and avoid unnecessary tests whenever reviewing changed files in CI.",
+        "C": "Require developers to omit existing test files from CI context so Claude infers coverage needs from product code alone.",
+        "D": "Commit project-level CLAUDE.md guidance describing valuable test criteria, fixture conventions, and reusable helpers for CI-invoked Claude Code."
+      }
+    },
+    {
+      "question_number": 26,
+      "scenario": "Claude Code for Continuous Integration",
+      "scenario_context": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives.",
+      "question": "Developers repeatedly ask Claude Code to run the same pre-PR test-gap analysis. The workflow needs a reusable checklist, should prompt for a target diff or file pattern when omitted, and must avoid tools unrelated to reading files and writing the generated test plan. Which configuration best supports this workflow?",
+      "options": {
+        "A": "Create a project skill in .claude/skills/test-gap-review/SKILL.md, configuring argument-hint and allowed-tools frontmatter, then include the reusable checklist.",
+        "B": "Create a project slash command in .claude/commands/test-gap-review.md and document tool restrictions inside the command instructions.",
+        "C": "Store the workflow in ~/.claude/skills/test-gap-review/SKILL.md so every contributor inherits the same skill configuration automatically during CI work.",
+        "D": "Add the checklist to project CLAUDE.md and ask developers to remember expected arguments and permitted tools."
+      }
+    },
+    {
+      "question_number": 27,
+      "scenario": "Claude Code for Continuous Integration",
+      "scenario_context": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives.",
+      "question": "A CI review job recently added strict accessibility guidance intended only for React UI files. After deployment, Claude starts flagging backend route handlers and migration scripts for missing ARIA labels because the guidance is loaded on every review. You need the guidance to apply automatically only when relevant changed files are in scope. What should you change?",
+      "options": {
+        "A": "Add a root CLAUDE.md instruction telling Claude to ignore accessibility guidance unless filenames look like React components.",
+        "B": "Move the accessibility guidance into a .claude/rules/ file with YAML frontmatter paths matching React component globs.",
+        "C": "Create a .claude/commands/accessibility.md command and require CI to invoke it only for pull requests containing UI files.",
+        "D": "Use @import from the project CLAUDE.md and ask Claude to decide whether the imported accessibility file applies."
+      }
+    },
+    {
+      "question_number": 28,
+      "scenario": "Customer Support Resolution Agent",
+      "scenario_context": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate.",
+      "question": "You added returns, billing, and account subagents. In test cases involving a damaged item plus a disputed late fee, the billing subagent asks the returns subagent about refund eligibility, the returns subagent replies directly, and the coordinator only sees the final billing summary. Audits now show missing rationale for why fees were waived, duplicate customer messages, and inconsistent escalation decisions. What orchestration change would best address this?",
+      "options": {
+        "A": "Have each subagent independently escalate whenever its confidence drops, then merge all escalations into the final customer response.",
+        "B": "Give all subagents the full conversation history and complete tool access so they can independently resolve cross-cutting issues.",
+        "C": "Route every subagent handoff and result through the coordinator, which aggregates state, applies escalation rules, and delegates follow-up work.",
+        "D": "Let specialized subagents call each other directly when they need context, reducing coordinator workload and shortening investigation paths."
+      }
+    },
+    {
+      "question_number": 29,
+      "scenario": "Claude Code for Continuous Integration",
+      "scenario_context": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives.",
+      "question": "Your automated pull request reviewer often flags issues such as \"possible confusing naming\" and \"maybe incomplete validation\" that developers dismiss as speculative. The current prompt already says \"be conservative\" and \"only report high-confidence findings,\" but dismissal rates have not improved across three sprints. What prompt change is most likely to improve precision without eliminating useful findings?",
+      "options": {
+        "A": "Add \"be extremely conservative\" twice in the system prompt, placing it before and after the review checklist.",
+        "B": "Replace vague confidence guidance with concrete reportable and non-reportable categories, severity definitions, and code examples for each finding type.",
+        "C": "Run the same broad prompt three times and report only findings appearing in at least two runs.",
+        "D": "Increase the required confidence threshold to 95%, requiring Claude to suppress any finding unless it can justify near certainty."
+      }
+    },
+    {
+      "question_number": 30,
+      "scenario": "Claude Code for Continuous Integration",
+      "scenario_context": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives.",
+      "question": "Your CI job invokes Claude Code in non-interactive mode to produce structured PR review findings. The output always passes JSON Schema validation, but your PR-comment step sometimes fails or posts misleading comments: a finding cites line 220 in a 90-line file, uses a file path not present in the diff, or places the vulnerable snippet inside the remediation field. What should you change in the review pipeline?",
+      "options": {
+        "A": "Run up to three blind retries whenever inline posting fails, accepting the first schema-valid response.",
+        "B": "Replace tool_use with prompted raw JSON and reject any response containing markdown, explanations, or missing fields.",
+        "C": "Increase schema strictness by making every field required and using enums for all free-text review fields.",
+        "D": "Keep tool_use schema enforcement, add deterministic checks for line ranges and file membership, then retry with those failures included."
+      }
+    },
+    {
+      "question_number": 31,
+      "scenario": "Code Generation with Claude Code",
+      "scenario_context": "You are using Claude Code to accelerate software development. Your team uses it for code generation, refactoring, debugging, and documentation. You need to integrate it into your development workflow with custom slash commands, CLAUDE.md configurations, and understand when to use plan mode vs direct execution.",
+      "question": "Your monorepo stores database migration files in several unrelated locations, including service folders, package folders, and an importer tool. All migration files must follow the same rollback, idempotency, and naming conventions. The team tried local instruction files near some migration folders, but new locations are frequently missed; placing the guidance in the root instructions makes Claude apply migration-specific advice during unrelated edits. What is the most maintainable configuration?",
+      "options": {
+        "A": "Duplicate identical CLAUDE.md files into every current migrations directory and update them manually as packages change.",
+        "B": "Put migration conventions in root CLAUDE.md and instruct Claude to ignore them when editing non-migration files.",
+        "C": "Create a .claude/rules/ migration file with paths matching all migration patterns so guidance loads only for those files.",
+        "D": "Create a migration skill that developers manually invoke before editing database files in each package."
+      }
+    },
+    {
+      "question_number": 32,
+      "scenario": "Structured Data Extraction",
+      "scenario_context": "You are building a structured data extraction system using Claude. The system extracts information from unstructured documents, validates output using JSON schemas, and maintains high accuracy. It must handle edge cases gracefully and integrate with downstream systems.",
+      "question": "A QA prompt flags extraction problems before records reach reviewers. In pilot results, most total-mismatch and missing-signature findings are confirmed, but a new \"possible payment-term ambiguity\" category is usually dismissed. Reviewers now skim the entire finding feed and miss confirmed total mismatches. What should you change first?",
+      "options": {
+        "A": "Increase the sample size in aggregate accuracy reports and reassure reviewers that overall precision remains above launch targets.",
+        "B": "Add a global \"be conservative\" instruction and suppress findings whenever Claude reports confidence below a fixed threshold.",
+        "C": "Separate findings by category and severity, tighten criteria for noisy checks, and prioritize high-precision issues in reviewer queues.",
+        "D": "Combine all findings into one confidence-sorted queue, instructing reviewers to ignore any item that appears low impact."
+      }
+    },
+    {
+      "question_number": 33,
+      "scenario": "Customer Support Resolution Agent",
+      "scenario_context": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate.",
+      "question": "During a maintenance task, Claude must update refund eligibility rules that may live in several packages. Recent attempts used broad repository reads, filling context with unrelated source files before finding the relevant configuration and test fixtures. The files follow naming conventions such as refund-policy.yaml, return-policy.json, and *.refund.test.ts, but their directories vary across services. What should you have Claude do first?",
+      "options": {
+        "A": "Use Bash to run recursive find commands for every possible extension, then paste the full command output into context.",
+        "B": "Use Glob with targeted filename patterns to list candidate policy and refund test files, then Read only the relevant matches.",
+        "C": "Use Read on each service directory recursively, then ask Claude to infer which files match the policy naming conventions.",
+        "D": "Use Grep for refund and return keywords across the repository, then Read every file containing either term."
+      }
+    },
+    {
+      "question_number": 34,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 34 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 34 image (p2page-34.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 35,
+      "scenario": "Customer Support Resolution Agent",
+      "scenario_context": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate.",
+      "question": "Production QA finds final replies often address refunds and returns but overlook shipping address corrections or unresolved account-lock evidence. Logs show subagents return partial findings successfully, but the coordinator accepts the first synthesized reply. Which change best improves completeness without escalating every multi-concern case?",
+      "options": {
+        "A": "Have the coordinator compare the draft resolution with the original request, assign targeted follow-up subagent work, then rerun synthesis.",
+        "B": "Instruct each subagent to include an overall confidence score, then escalate cases whenever any score falls below 0.8.",
+        "C": "Run the complete fixed subagent pipeline twice for every complex case, keeping whichever final answer is longer.",
+        "D": "Let the synthesis subagent directly contact investigation subagents for missing details, bypassing coordinator turns to reduce handoff latency."
+      }
+    },
+    {
+      "question_number": 36,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 36 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 36 image (p2page-36.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 37,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 37 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 37 image (p2page-37.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 38,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 38 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 38 image (p2page-38.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 39,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 39 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 39 image (p2page-39.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 40,
+      "scenario": "Customer Support Resolution Agent",
+      "scenario_context": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate.",
+      "question": "In testing, complex customer messages with several concerns take too long. For example, \"refund the damaged item, explain a duplicate charge, and update my locked account email\" causes the returns, billing, and account subagents to each retrieve the customer profile and inspect the same order history before producing overlapping summaries. Some issues are still missed because each subagent spends context on the entire case rather than its specialty. What orchestration change best addresses this?",
+      "options": {
+        "A": "Have the coordinator assign each subagent a distinct concern and shared verified facts, then combine findings into one customer response.",
+        "B": "Allow specialized subagents to message each other directly whenever overlap appears, reducing coordinator involvement during investigation.",
+        "C": "Route all cases through the same fixed sequence of subagents so each can review identical tool results before responding.",
+        "D": "Have every subagent independently investigate the full case, then let the coordinator choose the most complete final answer."
+      }
+    },
+    {
+      "question_number": 41,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 41 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 41 image (p2page-41.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 42,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 42 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 42 image (p2page-42.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 43,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 43 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 43 image (p2page-43.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 44,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 44 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 44 image (p2page-44.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 45,
+      "scenario": "Customer Support Resolution Agent",
+      "scenario_context": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate.",
+      "question": "A debugging session named \"refund-escalation-tuning\" previously inspected the support agent's system prompt, refund policy file, process_refund tool schema, and production traces. Before you continue, a teammate changed only the refund policy file and the process_refund tool schema. You want to keep useful prior analysis without letting outdated assumptions drive the next changes. What should you do?",
+      "options": {
+        "A": "Use the previous plan unchanged because Claude already inspected relevant files and session history preserves that earlier analysis.",
+        "B": "Resume the named session, identify the changed policy and tool-schema files, and request targeted revalidation before implementing fixes.",
+        "C": "Start a new session and have Claude rediscover the entire repository before considering any prior conclusions or proposed fixes.",
+        "D": "Resume the session, ask Claude for a single confidence score, and proceed when the score is above threshold."
+      }
+    },
+    {
+      "question_number": 46,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 46 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 46 image (p2page-46.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 47,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 47 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 47 image (p2page-47.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 48,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 48 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 48 image (p2page-48.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 49,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 49 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 49 image (p2page-49.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 50,
+      "scenario": "Structured Data Extraction",
+      "scenario_context": "You are building a structured data extraction system using Claude. The system extracts information from unstructured documents, validates output using JSON schemas, and maintains high accuracy. It must handle edge cases gracefully and integrate with downstream systems.",
+      "question": "In a pilot, 6% of procurement packet extractions fail semantic validation because the required approval date is missing. Reviewer audit shows the provided PDFs say \"approval letter on file,\" but the approval letters were not included in the model input. Retrying the same documents often produces plausible but unsupported dates. Which adjustment best improves extraction reliability?",
+      "options": {
+        "A": "Add examples of varied approval letter layouts and rerun extraction unchanged against the same uploaded procurement PDFs.",
+        "B": "Require the approval_date field and instruct Claude to infer it from nearby signature dates when no explicit date exists.",
+        "C": "Detect source absence after validation, stop automated retries, mark extraction incomplete, and request the missing approval letter.",
+        "D": "Retry failed documents up to five times with increasingly explicit prompts, then accept the most frequent date returned."
+      }
+    },
+    {
+      "question_number": 51,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 51 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 51 image (p2page-51.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 52,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 52 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 52 image (p2page-52.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 53,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 53 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 53 image (p2page-53.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 54,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 54 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 54 image (p2page-54.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 55,
+      "scenario": "Customer Support Resolution Agent",
+      "scenario_context": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate.",
+      "question": "Production logs show that during short order-service outages, customers with valid orders are sometimes told that no matching order exists. The same tool response shape is currently used when a search completes with zero matches and when the order backend cannot be reached. What change would best improve the agent's recovery behavior?",
+      "options": {
+        "A": "Return successful empty results only for completed searches, and structured retryable errors when order lookup cannot access the backend.",
+        "B": "Automatically retry every empty lookup_order response three times before telling customers that no matching orders were found.",
+        "C": "Treat all lookup_order failures as no-match outcomes, and escalate only if the customer disputes the result.",
+        "D": "Add a prompt instruction telling the agent to apologize and explain uncertainty whenever lookup_order returns empty results."
+      }
+    },
+    {
+      "question_number": 56,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 56 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 56 image (p2page-56.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 57,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 57 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 57 image (p2page-57.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 58,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 58 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 58 image (p2page-58.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 59,
+      "scenario": "Pending extraction",
+      "scenario_context": "Content on page 59 of Part_-_2.docx — not yet extracted due to conversation length constraints.",
+      "question": "See page 59 image (p2page-59.jpg) for full question text.",
+      "options": {
+        "A": "See image",
+        "B": "See image",
+        "C": "See image",
+        "D": "See image"
+      }
+    },
+    {
+      "question_number": 60,
+      "scenario": "Customer Support Resolution Agent",
+      "scenario_context": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate.",
+      "question": "Production logs show simple requests like \"Can you resend my tracking link?\" take nearly as long as multi-issue cases because every request runs through all specialist subagents. The extra passes sometimes introduce irrelevant refund or policy details into final responses, even when no refund is requested. Complex cases still require multiple specialists and a unified customer-facing answer. What change best improves the orchestration design?",
+      "options": {
+        "A": "Let specialist subagents message each other directly, allowing whichever agent finishes first to assemble the final customer response.",
+        "B": "Route each request to a single keyword-matched specialist, bypassing aggregation unless the customer explicitly asks about multiple issues.",
+        "C": "Have the coordinator assess request scope, delegate only to relevant specialist subagents, then aggregate their findings into one response.",
+        "D": "Keep the fixed specialist sequence, but lower each subagent's max_tokens so simple requests complete with less overhead."
+      }
+    }
+  ]
+}

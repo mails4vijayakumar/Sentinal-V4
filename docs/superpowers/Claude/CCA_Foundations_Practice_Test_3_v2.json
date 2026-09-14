@@ -1,0 +1,730 @@
+{
+  "exam": {
+    "title": "Practice Test 3: Claude Certified Architect Foundations",
+    "version": "v2.0",
+    "total_questions": 60,
+    "format": "Multiple Choice (4 options each)"
+  },
+  "questions": [
+    {
+      "id": 1,
+      "scenario": "Structured Data Extraction",
+      "topic": "Few-Shot Examples for Output Consistency",
+      "question": "You are building a structured data extraction system using Claude. The system extracts information from unstructured documents, validates output using JSON schemas, and maintains high accuracy. It must handle edge cases gracefully and integrate with downstream systems. Your extractor processes vendor contracts and outputs schema-valid records, but downstream reviewers report that obligation summaries vary from terse fragments to long paraphrases, evidence snippets sometimes include irrelevant surrounding text, and action_owner wording is inconsistent. The prompt already contains detailed field definitions and length guidance, but changes have not stabilized outputs. What should you do next?",
+      "options": {
+        "A": "Add 2 to 4 representative input and ideal output examples showing concise obligations, evidence boundaries, and owner wording.",
+        "B": "Reject any record whose summaries exceed a fixed word limit, then rerun the full document automatically.",
+        "C": "Expand the field descriptions with stricter prose rules for every obligation type, then ask Claude to be more consistent.",
+        "D": "Set temperature to zero and rely on deterministic decoding to standardize all reviewer-facing extraction wording across documents."
+      }
+    },
+    {
+      "id": 2,
+      "scenario": "Customer Support Resolution Agent",
+      "topic": "Adaptive Decomposition Strategy",
+      "question": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate. Production logs show that vague requests such as \"my replacement and refund are both wrong\" often require different investigation paths after the first backend lookup. Some turn out to be return-status issues, some are duplicate authorization holds, some involve account verification problems, and some combine multiple causes. A fixed workflow is producing unnecessary tool calls on simple cases and missing important branches on unusual cases. Which decomposition strategy should you use?",
+      "options": {
+        "A": "Set a maximum of three investigation steps, escalating any case that still lacks a clear resolution after the cap.",
+        "B": "Ask Claude to select one likely dispute category from the opening message, then execute only that category's standard workflow.",
+        "C": "Begin with a brief fact-gathering pass, then let the coordinator create targeted follow-up subtasks as tool findings reveal the dispute type.",
+        "D": "Run every vague case through a fixed sequence covering billing, returns, account access, and refunds before generating the final response."
+      }
+    },
+    {
+      "id": 3,
+      "scenario": "Customer Support Resolution Agent",
+      "topic": "State Persistence and Recovery",
+      "question": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate. A long-running billing dispute workflow delegates separate investigations for account status, order history, and refund eligibility. The service sometimes restarts after deploying updates. After restart, the coordinator resumes but cannot determine which subagent findings are current, re-runs completed investigations, and occasionally omits evidence needed for escalation handoffs. What design change best improves reliability?",
+      "options": {
+        "A": "Store only the final customer response draft after each run, using it as the sole recovery checkpoint.",
+        "B": "Resume the prior coordinator session and ask Claude to reconstruct missing subagent progress from the conversation transcript.",
+        "C": "Have each subagent export structured state to a known location; the coordinator reloads and injects it when resuming.",
+        "D": "Set a fixed limit of one retry per subagent after restarts, then continue with whichever findings return first."
+      }
+    },
+    {
+      "id": 4,
+      "scenario": "Multi-Agent Research System",
+      "topic": "Parallel Decomposition and Synthesis",
+      "question": "You are building a multi-agent research system using the Claude Agent SDK. A coordinator agent delegates to specialized subagents: one searches the web, one analyzes documents, one synthesizes findings, and one generates reports. The system researches topics and produces comprehensive, cited reports. A user asks for a report evaluating whether an organization should enter a new AI-assisted drug discovery market, covering scientific feasibility, regulatory exposure, partnership opportunities, and commercialization timing. In testing, the system often produces duplicated sections, misses relationships between findings, and takes longer than expected because each broad request is handled as a single chain of subagent calls. Which orchestration change would most effectively improve completeness and latency?",
+      "options": {
+        "A": "Let subagents message each other directly, allowing whichever agent finds decisive evidence to produce the final report.",
+        "B": "Ask the synthesis agent to resolve coverage gaps after receiving one broad search summary and one document summary.",
+        "C": "Decompose the request into concern-specific tasks, run relevant subagents in parallel with shared context, then synthesize one integrated report.",
+        "D": "Send the full request sequentially through every subagent, requiring each agent to append comments before report generation."
+      }
+    },
+    {
+      "id": 5,
+      "scenario": "Claude Code for Continuous Integration",
+      "topic": "Non-Interactive CI Execution (-p flag)",
+      "question": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives. A pull request review workflow launches `claude \"Review the changed files for security regressions\"` from a CI step. The process starts successfully, but the job sits idle until the CI timeout because the command is waiting for an interactive session instead of returning review text to stdout. What change should you make first?",
+      "options": {
+        "A": "Move the review command into a background terminal session so CI logs continue while Claude Code remains active.",
+        "B": "Wrap the existing command in a shell timeout and rerun the CI job whenever no output appears promptly.",
+        "C": "Run Claude Code with `claude -p \"Review the changed files for security regressions\"` so it prints output and exits.",
+        "D": "Pipe the prompt into the existing `claude` command and rely on end-of-file to close the interactive session."
+      }
+    },
+    {
+      "id": 6,
+      "scenario": "Multi-Agent Research System",
+      "topic": "Structured Error Categories for Tool Failures",
+      "question": "You are building a multi-agent research system using the Claude Agent SDK. A coordinator agent delegates to specialized subagents: one searches the web, one analyzes documents, one synthesizes findings, and one generates reports. The system researches topics and produces comprehensive, cited reports. During evaluation, the document-analysis subagent repeatedly calls an MCP tool to fetch the same unavailable source URL. Logs show the tool marks every failed fetch the same way, so the subagent retries permanent failures such as deleted documents and unsupported file formats, adding minutes of latency before the coordinator receives partial findings. What change would best improve recovery behavior?",
+      "options": {
+        "A": "Ask the coordinator to classify retryability from the tool's natural-language error text before deciding whether to rerun.",
+        "B": "Convert non-retryable failures into empty successful results so synthesis can continue without interruption or coordinator intervention.",
+        "C": "Retry every failed fetch three times before reporting failure, since repeated attempts smooth over temporary provider instability.",
+        "D": "Return errorCategory and isRetryable per failure, marking permanent source issues non-retryable and transient timeouts retryable with clear messages."
+      }
+    },
+    {
+      "id": 7,
+      "scenario": "Multi-Agent Research System",
+      "topic": "Coordinator-Mediated Communication",
+      "question": "You are building a multi-agent research system using the Claude Agent SDK. A coordinator agent delegates to specialized subagents: one searches the web, one analyzes documents, one synthesizes findings, and one generates reports. The system researches topics and produces comprehensive, cited reports. In a multi-agent research pipeline with a coordinator and specialized search, analysis, synthesis, and report agents, a prototype allows subagents to call one another whenever they need clarification. After several runs, audit logs are incomplete, retries are handled differently by each agent, and report outputs sometimes include findings the coordinator never reviewed. What architectural change would best improve reliability and observability?",
+      "options": {
+        "A": "Give every subagent access to all research tools so each can independently recover from missing information.",
+        "B": "Let subagents continue direct communication, but require each agent to append a natural-language summary after every handoff.",
+        "C": "Route subagent messages, errors, and follow-up requests through the coordinator, which manages delegation, recovery, and information flow.",
+        "D": "Replace coordinator decisions with a fixed pipeline that always runs search, analysis, synthesis, and reporting sequentially."
+      }
+    },
+    {
+      "id": 8,
+      "scenario": "Customer Support Resolution Agent",
+      "topic": "Glob for Targeted File Discovery",
+      "question": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate. While updating the agent's refund-policy behavior, you need to inspect only the files related to policy configuration and tests. The repository is large, and relevant files are spread across several packages with naming patterns such as return-policy.yaml, refund-policy.test.ts, and policy-overrides.json. What should you do first to locate the relevant files efficiently?",
+      "options": {
+        "A": "Use Grep for policy filename patterns across the repository, then Read every returned match before editing.",
+        "B": "Use Glob with targeted filename patterns, then Read only matching policy and test files before editing.",
+        "C": "Use Bash to recursively list the repository, then inspect unstructured terminal output for policy filenames.",
+        "D": "Use Read on each directory's configuration files first, then manually decide which refund policy files matter."
+      }
+    },
+    {
+      "id": 9,
+      "scenario": "Customer Support Resolution Agent",
+      "topic": "Stratified QA Sampling",
+      "question": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate. The QA process reviews 2% of auto-resolved tickets chosen uniformly each week. The dashboard shows 96% overall correctness, but refunds later reversed by human supervisors are concentrated in rare marketplace-seller warranty claims and older billing disputes that barely appear in the sample. You need to redesign review without sending every automated resolution to humans. What should you do?",
+      "options": {
+        "A": "Ask the agent to include a single global confidence score, then audit cases closest to the threshold.",
+        "B": "Use stratified random sampling across issue type, order age, seller channel, and resolution action for high-confidence auto-closures.",
+        "C": "Stop sampling tickets above the confidence threshold, and review only low-confidence or customer-complaint cases going forward.",
+        "D": "Increase the overall random sample from 2% to 5%, keeping selection uniform across all auto-resolved tickets."
+      }
+    },
+    {
+      "id": 10,
+      "scenario": "Structured Data Extraction",
+      "topic": "Evidence Provenance Through Pipeline Stages",
+      "question": "You are building a structured data extraction system using Claude. The system extracts information from unstructured documents, validates output using JSON schemas, and maintains high accuracy. It must handle edge cases gracefully and integrate with downstream systems. A pipeline extracts insurance policy exclusions from packets containing the policy, riders, emails, and broker notes. The first pass captures detailed snippets, but a middle step condenses each packet into a short narrative before final JSON extraction. Audit reviewers find accurate-looking exclusions in final records, but they cannot determine which document or passage supports each exclusion, especially when riders override earlier policy language. What change best addresses this failure mode?",
+      "options": {
+        "A": "Increase the final synthesis context budget so Claude can reread all original packet documents before producing each JSON record.",
+        "B": "Ask Claude to include citations only for exclusions it considers uncertain, keeping straightforward final records easier to read.",
+        "C": "Change intermediate handoffs so each extracted fact carries its source document, location, and supporting excerpt into final synthesis.",
+        "D": "Append a packet-level bibliography to every final JSON record so reviewers can manually search likely source documents."
+      }
+    },
+    {
+      "id": 11,
+      "scenario": "Customer Support Resolution Agent",
+      "topic": "Tool Call Interception Hooks",
+      "question": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate. Production review finds several billing dispute cases where the agent correctly verifies the customer and order, then attempts to call process_refund for amounts above your policy limit. Company policy allows autonomous refunds up to $500, but larger refunds require human approval before any financial action occurs. What change would most reliably prevent policy violations while preserving autonomous handling for allowed refunds?",
+      "options": {
+        "A": "Add a tool call interception hook that blocks process_refund above $500 and returns guidance to call escalate_to_human.",
+        "B": "Update the process_refund tool description to warn that refunds above $500 are forbidden without human approval.",
+        "C": "Scan the assistant's final text for refund amounts above $500 and create an audit alert after completion.",
+        "D": "Strengthen the system prompt with a mandatory refund limit rule and examples showing escalation for larger amounts."
+      }
+    },
+    {
+      "id": 12,
+      "scenario": "Multi-Agent Research System",
+      "topic": "Workstream Decomposition by Dimension",
+      "question": "You are building a multi-agent research system using the Claude Agent SDK. A coordinator agent delegates to specialized subagents: one searches the web, one analyzes documents, one synthesizes findings, and one generates reports. The system researches topics and produces comprehensive, cited reports. A user asks for a report comparing how proposed AI copyright regulations affect music licensing, film post-production, and book publishing in the United States and European Union. Test runs produce reports that mix jurisdictions, duplicate background sections, and leave some industry-specific risks unresolved because the coordinator sends the whole prompt to one research pass before synthesis. What workflow change best improves coverage and consistency?",
+      "options": {
+        "A": "Split the request into distinct industry and jurisdiction workstreams, pass shared scope definitions, investigate in parallel, then synthesize one report.",
+        "B": "Let subagents negotiate scope directly with each other, then have the coordinator accept whichever division they choose.",
+        "C": "Run the broad research pass repeatedly until the synthesis agent reports high confidence that no topics remain missing.",
+        "D": "Send the full prompt to every subagent sequentially, asking each one to improve whatever the previous agent missed."
+      }
+    },
+    {
+      "id": 13,
+      "scenario": "Customer Support Resolution Agent",
+      "topic": "Context Passing in Delegated Tasks",
+      "question": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate. During a pilot, the coordinator verifies a customer, retrieves two recent orders, and then delegates separate billing-dispute and returns-policy checks. The delegated analyses frequently state that the customer ID or order status is unknown, even though those facts were available earlier in the coordinator's turn. The coordinator currently sends each delegated check only a brief task title such as \"evaluate refund eligibility.\" What change would most reliably improve the delegated analyses?",
+      "options": {
+        "A": "Add few-shot examples instructing subagents to remember earlier coordinator turns during billing and return eligibility analysis.",
+        "B": "Increase the coordinator's conversation token budget so earlier verification and order lookup results remain available in session.",
+        "C": "Have subagents select customer and order records heuristically from names when required identifiers are missing from their prompts.",
+        "D": "Include the relevant verified customer facts, order details, and prior tool outputs directly in every delegated Task prompt."
+      }
+    },
+    {
+      "id": 14,
+      "scenario": "Claude Code for Continuous Integration",
+      "topic": "Missing Baseline Artifact Classification",
+      "question": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives. A structured CI review step extracts findings from pull request diffs into fields including changed_file, changed_line, breaking_change_evidence, and suggested_fix. Validation rejects several potential API-breaking findings because breaking_change_evidence is null. The rejected cases only include generated client changes in the CI context, while the previous API contract and baseline generated files are unavailable. What change best improves extraction quality without increasing unsupported findings?",
+      "options": {
+        "A": "Make evidence fields required and ask Claude to infer baseline behavior from generated filenames and changed imports.",
+        "B": "Accept the highest-confidence findings despite missing evidence, then rely on developers to dismiss unsupported CI comments.",
+        "C": "Retry every rejected finding with stronger instructions to fill all required evidence fields before CI posts comments.",
+        "D": "Classify missing-baseline failures separately, retry only format or placement errors, and add the baseline artifact before re-extracting."
+      }
+    },
+    {
+      "id": 15,
+      "scenario": "Structured Data Extraction",
+      "topic": "Row-Level Evidence Preservation in Synthesis",
+      "question": "You are building a structured data extraction system using Claude. The system extracts information from unstructured documents, validates output using JSON schemas, and maintains high accuracy. It must handle edge cases gracefully and integrate with downstream systems. Your pipeline extracts obligations from vendor contracts, policy memos, and meeting notes into a consolidated compliance matrix. Reviewers find that when two sources support the same obligation with slightly different wording, final rows contain a polished obligation statement and a bibliography list, but no row-level evidence trail. Auditors reject several rows because they cannot verify which excerpts were merged into each statement. What should you change?",
+      "options": {
+        "A": "Add a final verification prompt asking Claude to reconstruct citations for each matrix row after synthesis is complete.",
+        "B": "Choose the highest-confidence source for each obligation during deduplication and discard lower-confidence supporting excerpts before synthesis.",
+        "C": "Store the full input documents alongside the final matrix and instruct auditors to search them when evidence is needed.",
+        "D": "Require each extracted obligation to carry source excerpts and locations, then preserve and merge that evidence into each synthesized matrix row."
+      }
+    },
+    {
+      "id": 16,
+      "scenario": "Claude Code for Continuous Integration",
+      "topic": "Iterative Test Generation with Targeted Feedback",
+      "question": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives. A new CI job asks Claude Code to improve coverage for a data normalization utility. The first generated tests pass, but they miss null inputs, timezone boundary cases, and duplicate IDs. Follow-up prompts like \"be more thorough\" produce inconsistent additions and occasional regressions. What workflow should you use to make improvement more reliable?",
+      "options": {
+        "A": "Rewrite the prompt to say be exhaustive and conservative, then accept only tests whose descriptions sound sufficiently precise.",
+        "B": "Ask Claude to assign confidence scores to each proposed test, then merge only cases above a fixed threshold.",
+        "C": "Create a targeted test suite for expected behavior and edge cases, then iterate by feeding Claude the specific failing results.",
+        "D": "Have CI randomly rerun Claude Code until generated tests cover the missed cases, stopping after three unsuccessful attempts."
+      }
+    },
+    {
+      "id": 17,
+      "scenario": "Multi-Agent Research System",
+      "topic": "Parallel Task Calls for Independent Branches",
+      "question": "You are building a multi-agent research system using the Claude Agent SDK. A coordinator agent delegates to specialized subagents: one searches the web, one analyzes documents, one synthesizes findings, and one generates reports. The system researches topics and produces comprehensive, cited reports. Research runs are meeting quality expectations, but they take too long. Logs show the coordinator assigns three independent investigation branches (market adoption, regulatory responses, and technical limitations) one after another, waiting for each subagent to finish before starting the next. The branches do not depend on each other's intermediate findings, and the coordinator still needs to aggregate results before synthesis. What change best reduces elapsed time while preserving the intended orchestration pattern?",
+      "options": {
+        "A": "Have the coordinator issue separate Task calls for independent research branches in one response, then aggregate their returned findings before synthesis.",
+        "B": "Combine all branches into one broad Task prompt for a generalist subagent, then ask it to produce synthesis-ready findings.",
+        "C": "Keep the coordinator's sequential Task calls, but shorten each subagent prompt and cap each branch at one tool iteration.",
+        "D": "Allow the market adoption subagent to invoke the regulatory and technical subagents directly, then return a merged result."
+      }
+    },
+    {
+      "id": 18,
+      "scenario": "Claude Code for Continuous Integration",
+      "topic": "Structured JSON Output for Reliable Parsing",
+      "question": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives. Your CI job asks Claude Code to review each pull request and then posts findings as inline comments. The posting step intermittently fails because some runs return markdown tables, others return bullet lists, and field names like file path, line number, severity, and remediation are phrased inconsistently. The team wants a low-maintenance fix that lets the pipeline reliably validate findings before posting them. What should you do?",
+      "options": {
+        "A": "Ask Claude Code to begin every finding with identical labels, then reject runs containing unexpected label text.",
+        "B": "Configure Claude Code to emit structured JSON matching a schema containing required fields for inline review comments.",
+        "C": "Keep markdown output, then strengthen the parser with regular expressions covering every observed table and bullet format.",
+        "D": "Post Claude Code's raw review text as one general pull request comment instead of creating inline annotations."
+      }
+    },
+    {
+      "id": 19,
+      "scenario": "Customer Support Resolution Agent",
+      "topic": "Multi-Issue Decomposition and Synthesis",
+      "question": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate. A customer writes: \"I need a refund for a damaged item, I was charged twice for another order, and I cannot access my account email.\" In testing, the agent often resolves only the first issue it investigates, then closes the case with an incomplete answer. When instructed to \"handle everything,\" it sometimes mixes order details across issues or gives three disconnected replies. What workflow design best improves first-contact resolution for this pattern?",
+      "options": {
+        "A": "Choose the most urgent-looking concern based on wording intensity, resolve it first, and defer remaining concerns to humans.",
+        "B": "Process the customer's concerns strictly in message order, sending a separate final response after each tool result arrives.",
+        "C": "Create separate issue records after customer verification, investigate independent concerns using shared case facts, then synthesize one customer-facing resolution.",
+        "D": "Ask the customer to submit separate tickets for each concern before using backend tools or offering any resolution."
+      }
+    },
+    {
+      "id": 20,
+      "scenario": "Structured Data Extraction",
+      "topic": "Structured State Export for Resume After Interruption",
+      "question": "You are building a structured data extraction system using Claude. The system extracts information from unstructured documents, validates output using JSON schemas, and maintains high accuracy. It must handle edge cases gracefully and integrate with downstream systems. A long-running audit of your extraction pipeline delegates separate Claude Code subagents to inspect parser modules, schema definitions, validation failures, and downstream mapping logic. Twice this week, the process was interrupted after hours of exploration. When restarted, the coordinator repeated completed investigations, missed several previously discovered edge cases, and gave subagents incomplete background about which document formats had already been analyzed. What design change would most improve reliability after interruptions?",
+      "options": {
+        "A": "Have each subagent export structured state to fixed paths, then load a resume manifest into restarted coordinator prompts.",
+        "B": "Keep a single freeform scratchpad summary updated manually, then tell new subagents to continue from that summary.",
+        "C": "Resume the prior named session and ask Claude to infer unfinished work from the accumulated conversation history.",
+        "D": "Restart the audit from the beginning whenever an interruption occurs, discarding partial subagent findings to avoid inconsistency."
+      }
+    },
+    {
+      "id": 21,
+      "scenario": "Claude Code for Continuous Integration",
+      "topic": "Non-Interactive CI Execution (--print flag)",
+      "question": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives. A new GitHub Actions step invokes `claude \"Review the changed files for regressions\"` and then stalls until the CI timeout. The repository checkout is valid, and the same prompt works when a developer runs it manually in a terminal. What change should you make to the pipeline command?",
+      "options": {
+        "A": "Append prompt instructions telling Claude to avoid follow-up questions and finish the review automatically.",
+        "B": "Run Claude Code with the -p or --print flag so it processes the prompt and exits after output.",
+        "C": "Redirect stdin from /dev/null so Claude Code cannot wait for additional input during the CI job.",
+        "D": "Add --output-format json and --json-schema so the runner receives a parseable response without prompts."
+      }
+    },
+    {
+      "id": 22,
+      "scenario": "Customer Support Resolution Agent",
+      "topic": "Grep for Content Search in Codebase",
+      "question": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate. During a production incident review, logs show the message \"Refund approval token missing\" appears only after escalation handoffs. You need Claude Code to inspect the repository and identify every code path that emits or handles this message before changing anything. Which approach should you take first?",
+      "options": {
+        "A": "Use Grep to search repository contents for the exact error string and refund handler names, then Read matching files.",
+        "B": "Read every support-agent source file into context, then ask Claude to identify where the error originates.",
+        "C": "Use Edit to open likely refund modules one by one, searching manually before making targeted code changes.",
+        "D": "Use Glob to find refund-related filenames, then review only those files and skip content searches across unrelated paths."
+      }
+    },
+    {
+      "id": 23,
+      "scenario": "Customer Support Resolution Agent",
+      "topic": "Read-then-Write for Non-Unique Edit Targets",
+      "question": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate. While updating refund-policy handling, you ask Claude Code to change a guard clause in a large tool adapter file. The attempted edit fails because the selected text appears in several similar handlers for returns, billing credits, and refunds. You need only the refund handler changed without altering adjacent cases. What should you do next?",
+      "options": {
+        "A": "Load the full file with Read, identify the intended refund block, then Write the complete corrected file.",
+        "B": "Keep retrying Edit with the same replacement until Claude chooses the correct matching occurrence automatically.",
+        "C": "Use Grep to locate all duplicates, then ask Claude to modify every matching snippet for consistency.",
+        "D": "Run Bash with a broad search-and-replace command targeting the repeated text throughout the support module."
+      }
+    },
+    {
+      "id": 24,
+      "scenario": "Customer Support Resolution Agent",
+      "topic": "Stateful Prerequisite Gate for Policy Enforcement",
+      "question": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate. A customer support agent has MCP tools get_customer, lookup_order, process_refund, and escalate_to_human. During a billing-dispute pilot, get_customer correctly verifies the caller, and lookup_order sometimes returns an order tied to a different customer ID because family members share names. The required workflow says refunds must only be issued when the verified customer ID matches the order owner, otherwise the case goes to a human. Logs show Claude usually follows this, but occasionally calls process_refund after a persuasive customer message. What change best improves reliability?",
+      "options": {
+        "A": "Parse the assistant response for phrases like verified owner before allowing process_refund to run in production.",
+        "B": "Strengthen the system prompt to emphasize that ownership mismatches always require escalation before any refund is issued.",
+        "C": "Add a stateful prerequisite gate that blocks process_refund unless verified customer and order owner IDs match, then escalates mismatches.",
+        "D": "Add few-shot examples where persuasive customers with mismatched accounts receive apologies and are transferred without refunds."
+      }
+    },
+    {
+      "id": 25,
+      "scenario": "Claude Code for Continuous Integration",
+      "topic": "Interview-Style Criteria Discovery",
+      "question": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives. Your pilot review for database migration pull requests produces uneven feedback. Claude catches obvious syntax issues, but misses risks such as rollback safety, data retention, backward compatibility, and fixture setup because the team has not yet clarified what a good review should cover. You need to improve the workflow before enabling required CI checks. What should you do next?",
+      "options": {
+        "A": "Create several examples from previous clean migrations, then require Claude to imitate those comments exactly during review.",
+        "B": "Add a broad instruction to be extremely thorough, then suppress review comments unless Claude reports high confidence.",
+        "C": "Run an interview-style refinement pass where Claude asks maintainers targeted questions, then fold clarified criteria into the CI review prompt.",
+        "D": "Proceed with required CI enforcement now, using developer complaints from failed builds to discover missing criteria."
+      }
+    },
+    {
+      "id": 26,
+      "scenario": "Customer Support Resolution Agent",
+      "topic": "MCP Tool Description Quality",
+      "question": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate. A newly connected returns-policy MCP server exposes a returns_helper tool. In production traces, the tool is discovered and works when manually forced, but the agent usually chains lookup_order, asks customers redundant policy questions, or escalates standard return cases. What is the best first change to improve adoption of this MCP capability?",
+      "options": {
+        "A": "Merge returns_helper into process_refund so every refund attempt automatically computes eligibility before performing backend actions.",
+        "B": "Force returns_helper with tool_choice at the start of every return conversation, then let Claude continue after receiving results.",
+        "C": "Rewrite returns_helper MCP tool description to specify eligibility inputs, returned fields, examples, and boundaries with refund tools.",
+        "D": "Add a keyword router that invokes returns_helper whenever users mention return, exchange, refund, damaged, or late delivery."
+      }
+    },
+    {
+      "id": 27,
+      "scenario": "Structured Data Extraction",
+      "topic": "Enum Schema Design with Fallback Values",
+      "question": "You are building a structured data extraction system using Claude. The system extracts information from unstructured documents, validates output using JSON schemas, and maintains high accuracy. It must handle edge cases gracefully and integrate with downstream systems. Your extraction tool captures payment_method using a JSON Schema enum of credit_card, ach, wire, and check. In validation logs, documents with wording like \"paid through marketplace balance\" or no stated payment method either fail enum validation or get coerced into one of the existing categories, which misleads downstream reporting. What schema change best handles these edge cases while preserving structured categories?",
+      "options": {
+        "A": "Extend the enum with unclear and other, plus a required detail field when other is selected.",
+        "B": "Reject any document containing unfamiliar payment wording and route it directly to human review before extraction.",
+        "C": "Replace the enum with an unrestricted string so novel payment descriptions pass validation without schema changes.",
+        "D": "Force Claude to choose the closest existing enum value and add a confidence score for downstream filtering."
+      }
+    },
+    {
+      "id": 28,
+      "scenario": "Customer Support Resolution Agent",
+      "topic": "Tool Call Interception Hook for Policy Limit",
+      "question": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate. A new refunds policy allows autonomous refunds up to $150. Anything above that amount requires human approval, regardless of customer history, sentiment, or how obvious the case appears. In staging, the agent usually follows the policy but occasionally calls process_refund for $175 after reasoning that the customer clearly qualifies. What change best meets the policy requirement before launch?",
+      "options": {
+        "A": "Add few-shot examples where the agent declines refunds above $150 and apologizes before continuing the support conversation.",
+        "B": "Add a tool call interception hook that blocks process_refund above $150 and redirects the case to human escalation.",
+        "C": "Strengthen the system prompt to state that refunds above $150 must always be escalated before process_refund is used.",
+        "D": "Let the agent self-report confidence before each refund and escalate only when confidence falls below a fixed threshold."
+      }
+    },
+    {
+      "id": 29,
+      "scenario": "Claude Code for Continuous Integration",
+      "topic": "CLAUDE.md Restructuring with .claude/rules/",
+      "question": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives. Your repository's root CLAUDE.md has grown to 1,200 lines after adding review criteria, testing standards, API conventions, deployment notes, and migration guidance. CI-invoked Claude Code now produces noisy feedback that blends unrelated standards, and teams frequently create conflicting edits when updating guidance for their area. What restructuring approach best improves maintainability while preserving shared repository behavior?",
+      "options": {
+        "A": "Copy the relevant paragraphs into each package's CLAUDE.md so every directory contains a complete local instruction set.",
+        "B": "Keep all guidance in root CLAUDE.md, but add stronger headings telling Claude to ignore sections unrelated to each pull request.",
+        "C": "Move the CI review checklist into ~/.claude/CLAUDE.md on the build runner to reduce repository instruction size.",
+        "D": "Move narrowly scoped guidance into topic-specific files under .claude/rules/, leaving root CLAUDE.md with only universal CI review principles."
+      }
+    },
+    {
+      "id": 30,
+      "scenario": "Multi-Agent Research System",
+      "topic": "Session Management with Stale Sources",
+      "question": "You are building a multi-agent research system using the Claude Agent SDK. A coordinator agent delegates to specialized subagents: one searches the web, one analyzes documents, one synthesizes findings, and one generates reports. The system researches topics and produces comprehensive, cited reports. Last week, a long research investigation produced a draft report on a market topic. Since then, several source documents were replaced and the web index was refreshed. When the coordinator resumes the named investigation session, it repeatedly cites withdrawn documents and treats old search outputs as current, even after the user points out the updates. What should you do before continuing the report?",
+      "options": {
+        "A": "Resume the original session, remind the coordinator that some sources changed, and ask it to disregard outdated evidence.",
+        "B": "Start a new session, provide a structured summary of durable findings, and explicitly identify changed sources for fresh analysis.",
+        "C": "Continue the session until contradictions stop appearing, using a fixed maximum of five additional analysis iterations.",
+        "D": "Fork the old session into separate branches, compare their reports, and select the branch with fewer citation conflicts."
+      }
+    },
+    {
+      "id": 31,
+      "scenario": "Multi-Agent Research System",
+      "topic": "Source Characterization in Report Generation",
+      "question": "You are building a multi-agent research system using the Claude Agent SDK. A coordinator agent delegates to specialized subagents: one searches the web, one analyzes documents, one synthesizes findings, and one generates reports. The system researches topics and produces comprehensive, cited reports. Your report generator receives synthesis notes from a peer-reviewed meta-analysis, two industry surveys, and several vendor benchmarks. In the final report, a vendor benchmark's narrow claim is presented with the same authority as a repeated meta-analysis finding, and readers cannot judge how much weight to give each conclusion. What change would best improve the reliability of the report?",
+      "options": {
+        "A": "Have the synthesis agent select the most authoritative-looking source for each topic and omit weaker conflicting evidence.",
+        "B": "Organize conclusions by evidentiary status, retaining source characterization and methodological context for each major claim in the final report.",
+        "C": "Normalize all findings into one uniform summary style, then place complete citations in a bibliography at the end.",
+        "D": "Ask the report agent to add a general disclaimer that some sources may vary in quality and methodology."
+      }
+    },
+    {
+      "id": 32,
+      "scenario": "Claude Code for Continuous Integration",
+      "topic": "Evidence Thresholds for Performance Findings",
+      "question": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives. A pilot of your pull request reviewer shows developers dismiss most performance findings. The current review prompt says: \"Only report actionable issues you are highly confident about. Be conservative and avoid nitpicks.\" The dismissed findings are usually speculative comments like \"this loop might be slow\" without evidence about input size, hot paths, or repeated work. What prompt change would most effectively improve review precision?",
+      "options": {
+        "A": "Define reportable evidence thresholds for performance findings, including unbounded input growth, hot paths, or repeated database calls inside loops.",
+        "B": "Raise the required self-reported confidence score to 9/10 and automatically suppress any performance finding below that threshold.",
+        "C": "Require Claude to include longer reasoning for every performance concern, then post findings whose explanations sound specific and cautious.",
+        "D": "Repeat \"be conservative\" and \"avoid speculation\" in the system prompt header, review checklist, and final output instructions."
+      }
+    },
+    {
+      "id": 33,
+      "scenario": "Multi-Agent Research System",
+      "topic": "Structured Escalation Handoffs",
+      "question": "You are building a multi-agent research system using the Claude Agent SDK. A coordinator agent delegates to specialized subagents: one searches the web, one analyzes documents, one synthesizes findings, and one generates reports. The system researches topics and produces comprehensive, cited reports. During a run on regional climate adaptation funding, the document analysis subagent finds two credible government reports with incompatible cost estimates. The synthesis agent cannot determine whether the difference reflects methodology, geography, or time period. Current escalation tickets only say \"conflicting sources found,\" and human reviewers must restart the investigation from scratch. What change would best improve this mid-process escalation?",
+      "options": {
+        "A": "Generate a structured handoff with research topic, disputed claims, source citations, analysis performed, and recommended reviewer decisions.",
+        "B": "Attach the complete coordinator and subagent transcript so reviewers can reconstruct the investigation without model summarization.",
+        "C": "Have the report generator omit contested sections from final reports and notify reviewers only after unrelated sections finish.",
+        "D": "Ask the synthesis agent to choose the most plausible estimate and escalate only when its confidence score is low."
+      }
+    },
+    {
+      "id": 34,
+      "scenario": "Claude Code for Continuous Integration",
+      "topic": "Path-Scoped Rules Files for Migrations",
+      "question": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives. Your repository stores database migrations under services/*/db/migrations, packages/*/migrations, and legacy/*/schema. CI reviews often miss migration-specific rollback and locking requirements unless the changed files are in the one directory that already contains local guidance. You want review behavior to follow the relevant file patterns as packages move, without loading migration guidance for unrelated changes. What should you do?",
+      "options": {
+        "A": "Create a .claude/rules/migrations.md file with YAML paths matching all migration locations and keep the conventions there.",
+        "B": "Move all migration review guidance into the root CLAUDE.md so every CI run consistently sees the rules.",
+        "C": "Add a /review-migrations command and require the CI job to invoke it only when migration files change.",
+        "D": "Copy identical CLAUDE.md files into every current migration directory and update them whenever packages are reorganized."
+      }
+    },
+    {
+      "id": 35,
+      "scenario": "Multi-Agent Research System",
+      "topic": "fork_session for Independent Analysis Branches",
+      "question": "You are building a multi-agent research system using the Claude Agent SDK. A coordinator agent delegates to specialized subagents: one searches the web, one analyzes documents, one synthesizes findings, and one generates reports. The system researches topics and produces comprehensive, cited reports. The coordinator has finished an initial literature map for a controversial research topic. Two stakeholders now want independently developed report outlines, one focused on regulatory risk and one focused on commercial opportunity. Both outlines should start from the same verified source set, but exploratory assumptions from either outline must not influence the other before final comparison. What should you do?",
+      "options": {
+        "A": "Run both framing tasks in parallel Task calls that share a scratchpad file for notes and evolving assumptions.",
+        "B": "Create separate fork_session branches from the completed analysis baseline, develop each framing independently, then compare outputs through the coordinator.",
+        "C": "Continue in the existing coordinator session, alternate prompts for each framing, and instruct Claude to keep assumptions separate.",
+        "D": "Start two fresh sessions with only the original user request, then let each branch rediscover relevant sources independently."
+      }
+    },
+    {
+      "id": 36,
+      "scenario": "Customer Support Resolution Agent",
+      "topic": "Structured Error Categories (isRetryable)",
+      "question": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate. Production logs show two failure patterns in refund handling: intermittent gateway timeouts that often succeed on the next attempt, and permanent failures such as refund window expired or missing permission. Today the MCP tool sets isError and returns the same short failure message for both, so the agent sometimes repeats impossible operations and sometimes gives up on recoverable ones. What change best improves recovery behavior?",
+      "options": {
+        "A": "Disable automatic retries for process_refund and escalate all failed refund attempts to avoid duplicate backend operations.",
+        "B": "Configure the agent to retry every failed refund operation three times before showing the final error to the customer.",
+        "C": "Have the agent inspect failure message wording for timeout or permission keywords before deciding whether another attempt is useful.",
+        "D": "Add errorCategory and isRetryable fields to tool failures, retrying only failures marked retryable and preserving user-facing explanations."
+      }
+    },
+    {
+      "id": 37,
+      "scenario": "Customer Support Resolution Agent",
+      "topic": "Tool Result Injection via tool_use_id",
+      "question": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate. During a staging test, backend logs show that get_customer returns a verified customer record and lookup_order returns two eligible orders. On the next model request, the agent again asks the customer for the same identifiers and sometimes repeats the same lookup instead of deciding whether to refund or escalate. The tool executor is successfully calling the MCP tools and recording their outputs in server-side logs. What change most directly fixes this loop behavior?",
+      "options": {
+        "A": "Keep tool outputs in application state, then provide Claude a concise natural-language recap only after all tools finish.",
+        "B": "Continue the loop until the assistant text says the request is resolved, then suppress further tool calls.",
+        "C": "Run a predetermined get_customer, lookup_order, process_refund sequence and ignore intermediate model turns unless a tool fails.",
+        "D": "Append each executed tool result to the conversation history using the matching tool_use_id before sending the next model request."
+      }
+    },
+    {
+      "id": 38,
+      "scenario": "Claude Code for Continuous Integration",
+      "topic": "Few-Shot Examples for Test Coverage Review",
+      "question": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives. Your automated PR review has started posting comments that claim error-path tests are missing. Manual spot checks show many flagged cases are already covered through table-driven tests, shared fixtures, or helper-generated cases, but some genuinely uncovered branches still need comments. What change would most effectively improve the review prompt?",
+      "options": {
+        "A": "Require CI to flag gaps only when changed files lack a same-directory test file with matching filename patterns.",
+        "B": "Add a fixed minimum test-count rule per changed file and comment whenever the threshold is not met.",
+        "C": "Add targeted examples showing varied existing test structures and genuine gaps, including why each should be reported or skipped.",
+        "D": "Tell Claude to report only high-confidence missing-test findings and suppress anything that might already be covered indirectly."
+      }
+    },
+    {
+      "id": 39,
+      "scenario": "Claude Code for Continuous Integration",
+      "topic": "Path-Scoped .claude/rules/ Files",
+      "question": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives. A new CI review prompt loads the same repository guidance for every pull request. Review comments for generated API clients and database migrations now cite React accessibility rules and frontend naming standards, creating noisy false positives. The repository already keeps file-type conventions in separate markdown snippets, and you want Claude Code to consider each snippet only when the reviewed files are relevant. What should you configure?",
+      "options": {
+        "A": "Create focused .claude/rules/ files with YAML frontmatter paths globs targeting generated clients, migrations, and frontend files.",
+        "B": "Place directory-level CLAUDE.md files near current source folders and duplicate rules for generated or relocated files.",
+        "C": "Create separate project slash commands for each file type and require CI to choose one command before review.",
+        "D": "Add every convention to root CLAUDE.md and instruct Claude to ignore sections unrelated to each pull request."
+      }
+    },
+    {
+      "id": 40,
+      "scenario": "Multi-Agent Research System",
+      "topic": "Glob for Efficient File Discovery",
+      "question": "You are building a multi-agent research system using the Claude Agent SDK. A coordinator agent delegates to specialized subagents: one searches the web, one analyzes documents, one synthesizes findings, and one generates reports. The system researches topics and produces comprehensive, cited reports. In the research pipeline, the report generator subagent is wasting context while locating reusable markdown templates and citation-style files. The team already knows the naming conventions for these files, but the subagent currently inspects broad directory contents before deciding what to read. Which approach best reduces unnecessary context while preserving accuracy?",
+      "options": {
+        "A": "Use Read on all files under the reports directory, then summarize away files that appear irrelevant.",
+        "B": "Use Grep for template filenames across the repository, then Read every file returned by matching content lines.",
+        "C": "Use Glob with the known path patterns to enumerate candidate template files, then Read only the selected matches.",
+        "D": "Use Bash to run recursive directory listings, then have the subagent infer relevant templates from raw output."
+      }
+    },
+    {
+      "id": 41,
+      "scenario": "Multi-Agent Research System",
+      "topic": "Repository-Level MCP Server Configuration (.mcp.json)",
+      "question": "You are building a multi-agent research system using the Claude Agent SDK. A coordinator agent delegates to specialized subagents: one searches the web, one analyzes documents, one synthesizes findings, and one generates reports. The system researches topics and produces comprehensive, cited reports. A researcher adds an internal corpus MCP server that exposes tools for searching licensed journals and exporting citation metadata. The coordinator uses it successfully on that researcher's laptop, but teammates running the same workflow see only the default tools and produce reports with weaker public web citations. The server needs to be part of the team's reproducible research setup without exposing credentials. What should you change?",
+      "options": {
+        "A": "Add the server to each developer profile in ~/.claude.json, then document manual setup steps in the project README.",
+        "B": "Define the shared server in the repository's .mcp.json, using environment variable placeholders for credentials rather than committed secrets.",
+        "C": "Describe the server in CLAUDE.md and instruct the coordinator to request those research tools by name.",
+        "D": "Let each subagent call generic web search when MCP tools are unavailable, avoiding repository-level server configuration."
+      }
+    },
+    {
+      "id": 42,
+      "scenario": "Multi-Agent Research System",
+      "topic": "Role-Scoped Tool Access",
+      "question": "You are building a multi-agent research system using the Claude Agent SDK. A coordinator agent delegates to specialized subagents: one searches the web, one analyzes documents, one synthesizes findings, and one generates reports. The system researches topics and produces comprehensive, cited reports. During evaluation, the document analysis subagent sometimes initiates new web searches instead of analyzing the assigned PDFs, while the report generator occasionally rewrites evidence summaries before formatting them. Engineers added the extra tools to reduce coordinator round trips, but citation quality and role consistency have declined. What change best addresses the design issue?",
+      "options": {
+        "A": "Move all tool access to the coordinator and require subagents to return plain text requests whenever they need information.",
+        "B": "Keep the broad tool access, but add stronger prompts telling each subagent to avoid using tools outside its primary role.",
+        "C": "Restrict each subagent to role-relevant tools, adding only narrow cross-role utilities for frequent simple checks like source metadata lookup.",
+        "D": "Give all subagents the same complete tool list so each agent can independently choose the fastest path to completion."
+      }
+    },
+    {
+      "id": 43,
+      "scenario": "Multi-Agent Research System",
+      "topic": "Structured Subagent Output Format",
+      "question": "You are building a multi-agent research system using the Claude Agent SDK. A coordinator agent delegates to specialized subagents: one searches the web, one analyzes documents, one synthesizes findings, and one generates reports. The system researches topics and produces comprehensive, cited reports. During load testing, reports on broad topics become inconsistent once the research phase produces more than 30 source analyses. The document analysis subagent completes successfully, but its outputs are long narrative memos with internal reasoning, copied verbatim into the synthesis prompt. The synthesis agent omits high value evidence from earlier analyses and sometimes cites sources that were discussed but not central. What redesign best addresses the reliability problem?",
+      "options": {
+        "A": "Ask the synthesis agent to summarize each long subagent narrative first, then synthesize from its own summaries.",
+        "B": "Modify upstream subagents to return compact structured records: key facts, citations, relevance scores, and only synthesis-relevant details.",
+        "C": "Truncate each subagent response after a fixed character limit before sending it to the synthesis agent for review.",
+        "D": "Increase the synthesis agent's max_tokens and ask it to carefully read every upstream narrative before writing reports."
+      }
+    },
+    {
+      "id": 44,
+      "scenario": "Structured Data Extraction",
+      "topic": "Few-Shot Examples for Ambiguous Inputs",
+      "question": "You are building a structured data extraction system using Claude. The system extracts information from unstructured documents, validates output using JSON schemas, and maintains high accuracy. It must handle edge cases gracefully and integrate with downstream systems. In pilot runs, quantity fields from several vendors use shorthand like \"approx. 12 kg\", \"12kg net\", and \"12 kilograms\". The extractor often flags valid variants as defects while accepting truly ambiguous entries like \"12 units\" without unit context. The schema and validation logic are stable, and prose instructions listing allowed unit formats have not improved consistency. What change would most effectively improve judgment across new vendor layouts?",
+      "options": {
+        "A": "Increase the minimum confidence threshold so borderline extractions are routed to human review before downstream validation occurs.",
+        "B": "Instruct the model to return null for any measurement containing informal wording, unusual spacing, or missing punctuation.",
+        "C": "Add a small set of labeled examples showing acceptable unit variants and genuinely ambiguous entries, including expected fields and reasoning.",
+        "D": "Expand the prompt with a comprehensive list of every vendor-specific unit spelling and abbreviation observed so far."
+      }
+    },
+    {
+      "id": 45,
+      "scenario": "Claude Code for Continuous Integration",
+      "topic": "Skills with context: fork",
+      "question": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives. During an automated pull request review, your team added a reusable repository impact analysis step before generating final findings. The step produces long dependency traces, rejected hypotheses, and intermediate notes. When the same Claude Code session continues into final review, the posted comments become noisy and sometimes cite exploratory dead ends instead of actionable issues. What configuration change best preserves final review quality while keeping the reusable analysis available?",
+      "options": {
+        "A": "Add a required manual /compact step after exploration, then continue the same session for final pull request feedback.",
+        "B": "Configure the review helper as a skill with context: fork, returning only a concise summary to the main CI review.",
+        "C": "Move the repository analysis instructions into the root CLAUDE.md so every CI invocation shares the same discovery context.",
+        "D": "Split the exploration into a separate slash command that writes findings directly into the main conversation transcript."
+      }
+    },
+    {
+      "id": 46,
+      "scenario": "Multi-Agent Research System",
+      "topic": "Scratchpad Files for Persistent Findings",
+      "question": "You are building a multi-agent research system using the Claude Agent SDK. A coordinator agent delegates to specialized subagents: one searches the web, one analyzes documents, one synthesizes findings, and one generates reports. The system researches topics and produces comprehensive, cited reports. Your team uses the system to investigate an unfamiliar legacy repository that powers citation extraction. After several hours, the coordinator starts answering follow-up questions with generic claims about \"typical pipeline patterns\" and contradicts earlier discoveries about specific classes and data flows. The earlier discoveries were recorded only in long conversation turns mixed with verbose Read, Grep, and test outputs. What change would most effectively preserve accurate findings for later questions?",
+      "options": {
+        "A": "Increase the coordinator's context budget and retain every verbose tool output in conversation history for later retrieval.",
+        "B": "Have each exploration subagent write key findings to scratchpad files at known paths, and require later prompts to reference them.",
+        "C": "Add a final synthesis subagent that summarizes the entire conversation only after answers begin becoming inconsistent.",
+        "D": "Ask the coordinator to answer from memory unless uncertain, then rerun broad repository searches for missing details."
+      }
+    },
+    {
+      "id": 47,
+      "scenario": "Claude Code for Continuous Integration",
+      "topic": "Project Skills for Specialized CI Workflows",
+      "question": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives. Your pull request review job has become noisy after teams added security audit steps, release-note checks, dependency migration guidance, and test generation procedures to the repository's main Claude instructions. Simple documentation-only PRs now receive irrelevant warnings, while specialized jobs still need the detailed procedures when explicitly run. What configuration approach best balances consistency with focused context?",
+      "options": {
+        "A": "Store workflow instructions in user-scoped skills on the CI runner, updating them manually when jobs change.",
+        "B": "Consolidate every CI checklist into root CLAUDE.md so each automated review receives identical instructions for maximum consistency.",
+        "C": "Keep universal review principles in project CLAUDE.md, and move specialized CI workflows into project skills invoked by relevant jobs.",
+        "D": "Duplicate the complete workflow prompt inside each CI command, avoiding shared Claude Code configuration files entirely."
+      }
+    },
+    {
+      "id": 48,
+      "scenario": "Multi-Agent Research System",
+      "topic": "MCP Tool Description Rewriting",
+      "question": "You are building a multi-agent research system using the Claude Agent SDK. A coordinator agent delegates to specialized subagents: one searches the web, one analyzes documents, one synthesizes findings, and one generates reports. The system researches topics and produces comprehensive, cited reports. A new MCP server exposes a working literature database tool that searches licensed journals and returns abstracts, DOI links, publication dates, and citation-ready source metadata. In test runs, the web-search subagent often uses general web search for peer-reviewed evidence, while the document-analysis subagent scans exported PDFs manually. The MCP tool appears in the available tool list, but its surfaced description is only \"Search articles by query.\" What change should you make first?",
+      "options": {
+        "A": "Rename the tool to authoritative_research_supertool while leaving its inputs, outputs, and usage boundaries unchanged for stronger agent selection.",
+        "B": "Rewrite the MCP tool description to specify coverage, accepted queries, returned citation metadata, and when agents should prefer it.",
+        "C": "Add coordinator instructions requiring academic prompts to include the word literature so keyword matching routes agents correctly.",
+        "D": "Remove web search and file-search tools from all research subagents so the literature database becomes the only retrieval path."
+      }
+    },
+    {
+      "id": 49,
+      "scenario": "Structured Data Extraction",
+      "topic": "Multi-Pass Review Architecture",
+      "question": "You are building a structured data extraction system using Claude. The system extracts information from unstructured documents, validates output using JSON schemas, and maintains high accuracy. It must handle edge cases gracefully and integrate with downstream systems. A release candidate updates 18 extraction assets, including prompts, JSON schemas, validators, and few-shot examples across invoices, contracts, and intake forms. A single review request produces uneven results: detailed feedback on early files, superficial comments on later files, and missed mismatches between schema fields and validator assumptions. What review architecture should you use before approving the release?",
+      "options": {
+        "A": "Review each changed file separately for local prompt and schema defects, then run a final pass checking cross-file consistency.",
+        "B": "Ask contributors to limit extraction pull requests to five changed files, postponing larger schema updates until later releases.",
+        "C": "Increase the context budget and review all changed prompts, schemas, validators, and examples together in one request.",
+        "D": "Run three full-repository reviews and report only defects that at least two reviews identify independently."
+      }
+    },
+    {
+      "id": 50,
+      "scenario": "Claude Code for Continuous Integration",
+      "topic": "Explore Subagent for Verbose Discovery",
+      "question": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives. A nightly CI review job for large pull requests first asks Claude Code to map ownership boundaries, trace affected call paths, and inspect related tests before producing review findings. On broad changes, the job often fills the conversation with verbose search results and file excerpts, then the final review misses earlier discoveries or gives shallow comments. What adjustment would best preserve review quality while still allowing necessary investigation?",
+      "options": {
+        "A": "Keep all repository discovery in the main CI session, relying on /compact whenever verbose outputs crowd the conversation.",
+        "B": "Run verbose repository discovery in an Explore subagent, returning concise findings before the main CI review produces structured comments.",
+        "C": "Paste complete grep outputs and dependency trees into the initial prompt so Claude has maximum codebase context.",
+        "D": "Limit CI review to changed diff hunks only, avoiding exploratory reads so Claude spends attention on final comments."
+      }
+    },
+    {
+      "id": 51,
+      "scenario": "Claude Code for Continuous Integration",
+      "topic": "Skill with context: fork for Exploration Isolation",
+      "question": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives. A custom CI skill first inspects the repository's dependency graph, flaky test history, and prior pull request comments before producing review guidance. In recent runs, the main review output increasingly repeats exploratory notes from that setup phase, reports issues unrelated to the changed files, and sometimes misses straightforward diff-specific problems. What change would best preserve review focus while keeping the setup workflow available?",
+      "options": {
+        "A": "Move the workflow into project-level CLAUDE.md so every review session consistently receives the same investigation instructions.",
+        "B": "Configure the skill with context: fork so verbose exploration runs separately and returns only a concise summary.",
+        "C": "Increase the skill's argument-hint details so developers provide narrower module names and reduce exploratory output during invocation.",
+        "D": "Have the CI prompt ignore earlier verbose notes and report only high-confidence findings from the pull request."
+      }
+    },
+    {
+      "id": 52,
+      "scenario": "Claude Code for Continuous Integration",
+      "topic": "Structured Dismissal Tracking for Prompt Iteration",
+      "question": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives. Your automated PR reviewer emits structured findings with fields for file, line, severity, category, and suggested fix. Developers dismiss 38% of comments, but the dashboard only shows broad categories like \"bug\" and \"maintainability,\" making prompt iteration unfocused. What schema and workflow change would best support systematic improvement?",
+      "options": {
+        "A": "Parse developer dismissal comments for negative sentiment, then prioritize prompt changes for the most frustrated responses.",
+        "B": "Require Claude to include a higher self-reported confidence score, then suppress comments below the team's chosen threshold.",
+        "C": "Combine dismissed findings into weekly natural-language summaries, then ask Claude to infer the recurring root causes.",
+        "D": "Add a structured field capturing the triggering code pattern, then analyze dismissal rates by that field during prompt iterations."
+      }
+    },
+    {
+      "id": 53,
+      "scenario": "Claude Code for Continuous Integration",
+      "topic": "Concrete Report/Skip Criteria with Examples",
+      "question": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives. After changing the pull request review prompt from \"find all potential reliability issues\" to \"be conservative and include only actionable comments,\" the bot still flags defensive null checks as bugs and ordinary retry loops as performance defects. Developers dismiss more than half of its comments and say they cannot predict what the bot considers worth reporting. What change should you make next?",
+      "options": {
+        "A": "Replace broad caution language with concrete report and skip criteria for each review category, including representative true-positive and non-issue examples.",
+        "B": "Post all findings as non-blocking informational comments so developers can ignore false positives without changing review criteria.",
+        "C": "Add stronger wording that Claude must be extremely conservative and should only comment when it feels completely certain.",
+        "D": "Require every finding to include a self-reported confidence score, then suppress comments below a configured confidence threshold."
+      }
+    },
+    {
+      "id": 54,
+      "scenario": "Structured Data Extraction",
+      "topic": "Fallback Enum Values for Novel Categories",
+      "question": "You are building a structured data extraction system using Claude. The system extracts information from unstructured documents, validates output using JSON schemas, and maintains high accuracy. It must handle edge cases gracefully and integrate with downstream systems. Production evaluation shows your extraction tool validates successfully, but downstream analytics are unreliable. New vendor industries and uncertain contract classifications are being squeezed into the closest allowed enum value, causing misleading dashboards even though no JSON schema errors occur. What schema change would best improve reliability while preserving machine-readable output?",
+      "options": {
+        "A": "Expand the enum with every observed category and reject documents whose categories are not already listed.",
+        "B": "Replace the enum with a free-text string field and let downstream systems normalize categories after extraction.",
+        "C": "Add explicit fallback enum values with companion detail fields so uncertain or novel categories are captured without forced misclassification.",
+        "D": "Keep the closed enum unchanged and retry extractions until the model selects one of the approved category values."
+      }
+    },
+    {
+      "id": 55,
+      "scenario": "Customer Support Resolution Agent",
+      "topic": "Escalation Calibration for Frustrated Customers",
+      "question": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate. Production review finds the agent routes many frustrated but straightforward damage-replacement cases to escalate_to_human. The tickets usually include phrases like \"this is ridiculous\" and photos matching your standard replacement policy, but not an explicit request for a human. Which change best improves escalation calibration while preserving customer preference handling?",
+      "options": {
+        "A": "Require the agent to finish all available investigation steps before honoring any human escalation preference from the customer.",
+        "B": "Automatically escalate any message with angry language before investigating, because negative sentiment indicates the case is too complex.",
+        "C": "Update guidance to acknowledge frustration, proceed with supported resolution steps, and escalate only if the customer again asks for a human.",
+        "D": "Have the agent request a self-rated confidence score from itself, escalating when the score falls below a threshold."
+      }
+    },
+    {
+      "id": 56,
+      "scenario": "Customer Support Resolution Agent",
+      "topic": "Objective-Based Delegation vs Fixed Checklists",
+      "question": "You are building a customer support resolution agent using the Claude Agent SDK. The agent handles high-ambiguity requests like returns, billing disputes, and account issues. It has access to backend systems through MCP tools (get_customer, lookup_order, process_refund, escalate_to_human). Your target is 80%+ first-contact resolution while knowing when to escalate. A coordinator delegates complex billing disputes to a case-investigation subagent. Logs show that when order data contains unusual combinations, such as a partial return plus a delayed replacement, the subagent follows the coordinator's embedded seven-step checklist exactly and returns incomplete conclusions instead of adapting. What change would most improve the delegation design?",
+      "options": {
+        "A": "Have the coordinator post-process incomplete subagent reports by guessing missing findings from customer tone and available message text.",
+        "B": "Keep the checklist but add instructions telling the subagent to ignore any step that seems irrelevant or outdated.",
+        "C": "Create separate subagents for every order status so the coordinator can route each case to a fixed procedure.",
+        "D": "Rewrite delegated Task prompts to state the support objective, constraints, case facts, and resolution quality criteria, leaving investigation paths flexible."
+      }
+    },
+    {
+      "id": 57,
+      "scenario": "Multi-Agent Research System",
+      "topic": "Executing All tool_use Blocks Before Continuing",
+      "question": "You are building a multi-agent research system using the Claude Agent SDK. A coordinator agent delegates to specialized subagents: one searches the web, one analyzes documents, one synthesizes findings, and one generates reports. The system researches topics and produces comprehensive, cited reports. During load testing, broad topics often produce reports missing either web evidence or document evidence. Logs show the coordinator requested both search and document analysis in the same model response, but the next model input contains only one returned result before synthesis begins. What change best fixes the orchestration bug?",
+      "options": {
+        "A": "When the API response has stop_reason tool_use, execute all tool_use blocks, append matching results, and continue until end_turn.",
+        "B": "Treat preliminary report text as completion unless it contains explicit phrases like NEED_MORE_TOOLS or CONTINUE_RESEARCH.",
+        "C": "Execute the first requested tool immediately, then ask the coordinator to reissue any remaining requests on the next turn.",
+        "D": "Serialize the workflow by preventing simultaneous subagent requests, requiring search, analysis, synthesis, and reporting in fixed order."
+      }
+    },
+    {
+      "id": 58,
+      "scenario": "Claude Code for Continuous Integration",
+      "topic": "Nullable Schema Fields for Unavailable Metadata",
+      "question": "You are integrating Claude Code into your CI/CD pipeline. The system runs automated code reviews, generates test cases, and provides feedback on pull requests. You need to design prompts that provide actionable feedback and minimize false positives. Your CI review uses tool_use to produce a JSON finding object with required fields file_path, start_line, severity, owner_team, linked_ticket, and suggested_fix. In PRs that lack ownership or ticket metadata, reviews contain plausible but nonexistent owner teams and tickets, which downstream automation routes incorrectly. What schema change best addresses this while preserving useful findings?",
+      "options": {
+        "A": "Redesign the schema so unavailable source-dependent fields are nullable or optional, with instructions to return null unless directly evidenced.",
+        "B": "Reject any finding missing routing metadata before posting comments, ensuring only fully populated findings reach developers.",
+        "C": "Keep all fields required and add stronger prompt wording telling Claude never to invent values from context.",
+        "D": "Infer absent metadata from repository naming conventions so every finding contains complete routing information for automation."
+      }
+    },
+    {
+      "id": 59,
+      "scenario": "Multi-Agent Research System",
+      "topic": "Read-then-Write for Non-Unique Edit Targets",
+      "question": "You are building a multi-agent research system using the Claude Agent SDK. A coordinator agent delegates to specialized subagents: one searches the web, one analyzes documents, one synthesizes findings, and one generates reports. The system researches topics and produces comprehensive, cited reports. A report-generation subagent must update a shared Markdown template used for final research reports. The template contains the same phrase, \"TODO: add source summary,\" in several sections, and repeated attempts to make a targeted replacement keep failing because the match is not unique. What should you do next?",
+      "options": {
+        "A": "Keep retrying Edit with broader surrounding text until one replacement succeeds without manually inspecting the full file.",
+        "B": "Use Grep to locate every matching phrase, then replace all occurrences so the failed edit cannot recur.",
+        "C": "Use Bash with a scripted search-and-replace command to bypass Edit and update the template automatically.",
+        "D": "Use Read to load the full template, modify the intended section, then Write the complete corrected file back."
+      }
+    },
+    {
+      "id": 60,
+      "scenario": "Structured Data Extraction",
+      "topic": "Targeted Examples for Diverse Document Layouts",
+      "question": "You are building a structured data extraction system using Claude. The system extracts information from unstructured documents, validates output using JSON schemas, and maintains high accuracy. It must handle edge cases gracefully and integrate with downstream systems. Your extractor captures sample_size, study_design, and citation_source from journal articles. It works on papers with explicit Methods and References sections, but misses the same fields when sample details appear in an abstract footnote, study design appears in an appendix table, or citations are inline only. Validation passes because those fields are nullable, but downstream analytics show systematic under-extraction. What change would most effectively improve extraction quality?",
+      "options": {
+        "A": "Expand the instructions with a longer list of possible section names and tell Claude to search them exhaustively.",
+        "B": "Preprocess documents with keyword rules that discard content outside Methods, Results, References, and Appendix headings before extraction.",
+        "C": "Make sample_size, study_design, and citation_source required in the schema so validation failures force complete outputs.",
+        "D": "Add targeted examples showing correct extraction from multiple document layouts, including inline citations, appendix tables, and embedded methodology details."
+      }
+    }
+  ]
+}
